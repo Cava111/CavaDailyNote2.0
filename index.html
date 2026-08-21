@@ -28,6 +28,7 @@
         <symbol id="icon-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.2 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></symbol>
         <symbol id="icon-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M8 12h.01M16 12h.01M8 16h8"/><circle cx="12" cy="3" r="1"/></symbol>
         <symbol id="icon-forward" viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></symbol>
+        <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.6-2.6L20 9M4 15l2.3 2.6A7 7 0 0 0 17.9 15"/></symbol>
         <symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="m7 15 4-4 3 2 5-6"/></symbol>
         <symbol id="icon-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".8" fill="currentColor"/><circle cx="4" cy="12" r=".8" fill="currentColor"/><circle cx="4" cy="18" r=".8" fill="currentColor"/></symbol>
         <symbol id="icon-trend-up" viewBox="0 0 24 24"><path d="M4 16 10 10l4 4 6-7"/><path d="M15 7h5v5"/></symbol>
@@ -611,11 +612,21 @@
     </div>
     <div id="message-action-menu" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-body"><button id="multi-select-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-check-square"></use></svg> 多选</button><button id="edit-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-edit"></use></svg>
+            <div class="modal-body"><button id="multi-select-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-check-square"></use></svg> 多选</button><button id="regenerate-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-refresh"></use></svg> 重生成</button><button id="edit-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-edit"></use></svg>
                     编辑</button><button id="edit-ai-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-edit"></use></svg> 编辑</button><button id="copy-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-copy"></use></svg>
                     复制</button><button id="delete-message-btn" class="danger"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-trash"></use></svg> 删除</button></div>
             <div class="modal-footer" style="padding-top:0;"><button class="cancel-btn" style="width:100%;">取消</button>
             </div>
+        </div>
+    </div>
+    <div id="regenerate-confirm-modal" class="modal-overlay">
+        <div class="modal-content regenerate-confirm-content">
+            <div class="modal-header">确认重生成</div>
+            <div class="modal-body">
+                <p id="regenerate-confirm-text"></p>
+                <label class="regenerate-dont-remind"><input type="checkbox" id="regenerate-dont-remind"> 不再提醒</label>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn" id="confirm-regenerate-btn">确认重生成</button></div>
         </div>
     </div>
     <div id="schedule-detail-modal" class="modal-overlay">

@@ -1,4 +1,75 @@
 /* Cava Notebook - 03-event-listeners.js */
+            function setupPanelSwipeDismiss(panel, onDismiss, scrollableSelector = null) {
+                let startY = 0;
+                let startX = 0;
+                let startTime = 0;
+                let dragDistance = 0;
+                let isTracking = false;
+                const scrollable = scrollableSelector ? panel.querySelector(scrollableSelector) : null;
+
+                const resetPanelPosition = () => {
+                    panel.classList.remove('is-dragging');
+                    panel.style.removeProperty('transform');
+                    setTimeout(() => panel.style.removeProperty('transition'), 220);
+                };
+
+                panel.addEventListener('touchstart', event => {
+                    if (!panel.classList.contains('visible') || event.touches.length !== 1) return;
+                    const target = event.target;
+                    const startedOnHeader = Boolean(target.closest('.panel-header'));
+                    const startedOnScrollableTop = scrollable
+                        && scrollable.contains(target)
+                        && scrollable.scrollTop <= 0
+                        && !target.closest('button, input, textarea, select, label');
+                    if (!startedOnHeader && !startedOnScrollableTop) return;
+
+                    const touch = event.touches[0];
+                    startY = touch.clientY;
+                    startX = touch.clientX;
+                    startTime = performance.now();
+                    dragDistance = 0;
+                    isTracking = true;
+                    panel.style.removeProperty('transition');
+                }, { passive: true });
+
+                panel.addEventListener('touchmove', event => {
+                    if (!isTracking || event.touches.length !== 1) return;
+                    const touch = event.touches[0];
+                    const deltaY = touch.clientY - startY;
+                    const deltaX = touch.clientX - startX;
+                    if (deltaY <= 0 || Math.abs(deltaX) > deltaY) return;
+
+                    dragDistance = deltaY;
+                    panel.classList.add('is-dragging');
+                    panel.style.transform = `translateY(${dragDistance}px)`;
+                    event.preventDefault();
+                }, { passive: false });
+
+                const finishDrag = () => {
+                    if (!isTracking) return;
+                    isTracking = false;
+                    const duration = Math.max(performance.now() - startTime, 1);
+                    const velocity = dragDistance / duration;
+                    const shouldDismiss = dragDistance >= 90 || (dragDistance >= 45 && velocity > 0.55);
+
+                    panel.classList.remove('is-dragging');
+                    panel.style.transition = 'transform 180ms cubic-bezier(0.4, 0, 0.2, 1)';
+                    if (shouldDismiss) {
+                        panel.style.transform = 'translateY(100%)';
+                        setTimeout(() => {
+                            onDismiss();
+                            resetPanelPosition();
+                        }, 180);
+                    } else {
+                        panel.style.transform = 'translateY(0)';
+                        setTimeout(resetPanelPosition, 180);
+                    }
+                };
+
+                panel.addEventListener('touchend', finishDrag, { passive: true });
+                panel.addEventListener('touchcancel', finishDrag, { passive: true });
+            }
+
             function setupEventListeners() {
                 ELS.navItems.forEach(item => item.addEventListener('click', () => navigateTo(item.dataset.page)));
 
@@ -138,6 +209,8 @@
 
                 setupSchedulePanelListeners();
                 setupCalendarModalListeners();
+                setupPanelSwipeDismiss(ELS.transactionPanel, hideTransactionPanel);
+                setupPanelSwipeDismiss(ELS.schedulePanel, hideSchedulePanel, '.schedule-form');
 
                 // Ledger page listeners
                 document.getElementById('ledger-month-filter-btn').addEventListener('click', openMonthFilterModal);

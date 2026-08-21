@@ -269,6 +269,7 @@
 
                 const editUserBtn = document.getElementById('edit-message-btn');
                 const editAiBtn = document.getElementById('edit-ai-message-btn');
+                const regenerateBtn = document.getElementById('regenerate-message-btn');
                 const copyBtn = document.getElementById('copy-message-btn');
                 const deleteBtn = document.getElementById('delete-message-btn');
 
@@ -276,6 +277,7 @@
                 const isUserTransaction = msg.role === 'user' && msg.type === 'transaction';
                 const isUserSchedule = msg.role === 'user' && msg.type === 'schedule';
                 const isAiText = msg.role === 'assistant' && msg.type === 'text';
+                const isAiMessage = msg.role === 'assistant' && Boolean(msg.senderId);
                 const isCopyable = isUserText || isAiText || (isUserTransaction && state.transactions.find(t => t.id === msg.relatedId)?.remark) || (isUserSchedule && state.schedules.find(s => s.id === msg.relatedId)?.description);
 
                 editUserBtn.style.display = (isUserText || isUserTransaction || isUserSchedule) ? 'block' : 'none';
@@ -284,14 +286,110 @@
                 else editUserBtn.innerHTML = `${appIcon('edit', 'svg-icon-inline')} 编辑`;
 
                 editAiBtn.style.display = isAiText ? 'block' : 'none';
+                regenerateBtn.style.display = isAiMessage ? 'block' : 'none';
                 copyBtn.style.display = isCopyable ? 'block' : 'none';
 
                 editUserBtn.onclick = () => { menu.classList.remove('visible'); editMessage(msgId); };
                 editAiBtn.onclick = () => { menu.classList.remove('visible'); editMessage(msgId); };
+                regenerateBtn.onclick = () => { menu.classList.remove('visible'); regenerateAIResponse(msgId); };
                 copyBtn.onclick = () => { menu.classList.remove('visible'); copyMessage(msgId); };
                 deleteBtn.onclick = () => { menu.classList.remove('visible'); deleteMessage(msgId); };
 
                 menu.classList.add('visible');
+            }
+
+            function getAIResponseGroup(message) {
+                if (message.responseGroupId) {
+                    return state.messages.filter(item => item.responseGroupId === message.responseGroupId);
+                }
+
+                const selectedIndex = state.messages.findIndex(item => item.id === message.id);
+                if (selectedIndex === -1) return [message];
+                let startIndex = selectedIndex;
+                let endIndex = selectedIndex;
+
+                while (startIndex > 0) {
+                    const current = state.messages[startIndex];
+                    const previous = state.messages[startIndex - 1];
+                    const isSameLegacyResponse = previous.role === 'assistant'
+                        && previous.senderId === message.senderId
+                        && !previous.responseGroupId
+                        && current.timestamp - previous.timestamp <= 10000;
+                    if (!isSameLegacyResponse) break;
+                    startIndex--;
+                }
+
+                while (endIndex < state.messages.length - 1) {
+                    const current = state.messages[endIndex];
+                    const next = state.messages[endIndex + 1];
+                    const isSameLegacyResponse = next.role === 'assistant'
+                        && next.senderId === message.senderId
+                        && !next.responseGroupId
+                        && next.timestamp - current.timestamp <= 10000;
+                    if (!isSameLegacyResponse) break;
+                    endIndex++;
+                }
+
+                return state.messages.slice(startIndex, endIndex + 1);
+            }
+
+            function requestRegenerationConfirmation(characterName) {
+                if (state.config.skipRegenerateConfirm) return Promise.resolve(true);
+
+                const modal = document.getElementById('regenerate-confirm-modal');
+                const confirmButton = document.getElementById('confirm-regenerate-btn');
+                const cancelButton = modal.querySelector('.cancel-btn');
+                const dontRemind = document.getElementById('regenerate-dont-remind');
+                document.getElementById('regenerate-confirm-text').textContent = `是否确认重新生成「${characterName}」本轮的全部消息？`;
+                dontRemind.checked = false;
+                modal.classList.add('visible');
+
+                return new Promise(resolve => {
+                    const finish = async confirmed => {
+                        modal.classList.remove('visible');
+                        modal.onclick = null;
+                        if (confirmed && dontRemind.checked) await updateConfig('skipRegenerateConfirm', true);
+                        resolve(confirmed);
+                    };
+                    confirmButton.onclick = () => finish(true);
+                    cancelButton.onclick = () => finish(false);
+                    modal.onclick = event => {
+                        if (event.target === modal) finish(false);
+                    };
+                });
+            }
+
+            async function regenerateAIResponse(msgId) {
+                if (state.isRegeneratingAIResponse) return;
+                const message = state.messages.find(item => item.id === msgId);
+                if (!message || message.role !== 'assistant' || !message.senderId) return;
+                const character = state.characters.find(item => item.id === message.senderId);
+                if (!character) {
+                    alert('找不到这条消息对应的 AI 角色。');
+                    return;
+                }
+                const proxy = state.proxies.find(item => item.id === character.proxyId);
+                if (!proxy || !character.model) {
+                    alert(`角色 "${character.name}" 未配置主用API或模型，无法重生成。`);
+                    return;
+                }
+                if (!await requestRegenerationConfirmation(character.name)) return;
+
+                const responseMessages = getAIResponseGroup(message);
+                const responseIds = responseMessages.map(item => item.id).filter(id => typeof id === 'number');
+                state.isRegeneratingAIResponse = true;
+                try {
+                    if (responseIds.length > 0) await db.messages.bulkDelete(responseIds);
+                    const responseIdSet = new Set(responseMessages.map(item => item.id));
+                    state.messages = state.messages.filter(item => !responseIdSet.has(item.id));
+                    renderChatMessages(false);
+                    await triggerAIResponse(character);
+                } catch (error) {
+                    console.error('Regeneration failed:', error);
+                    alert(`重生成失败：${error.message}`);
+                } finally {
+                    state.isRegeneratingAIResponse = false;
+                }
             }
 
             function cancelCurrentEdit() {

@@ -246,16 +246,30 @@
         }
 
         .panel-header {
-            padding: 8px 15px;
+            padding: 16px 15px 8px;
             text-align: center;
             font-weight: 600;
             position: relative;
+            touch-action: none;
+            user-select: none;
+        }
+
+        .panel-header::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            width: 38px;
+            height: 4px;
+            border-radius: 999px;
+            background: var(--border-color);
+            transform: translateX(-50%);
         }
 
         .panel-header .close-btn {
             position: absolute;
             left: 15px;
-            top: 8px;
+            top: 12px;
             font-size: 18px;
             line-height: 1;
             color: var(--text-secondary);
@@ -337,6 +351,11 @@
         .category-item .icon {
             font-size: 28px;
             margin-bottom: 5px;
+        }
+
+        #transaction-panel.is-dragging,
+        #schedule-panel.is-dragging {
+            transition: none !important;
         }
 
         .category-item .icon .svg-icon {

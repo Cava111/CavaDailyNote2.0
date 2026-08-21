@@ -22,12 +22,15 @@
                 pie: '这是我账本图表数据，请你帮我分析一下：{data}'
             };
 
+            const defaultLedgerDate = new Date();
+            const DEFAULT_LEDGER_MONTH = `${defaultLedgerDate.getFullYear()}-${String(defaultLedgerDate.getMonth() + 1).padStart(2, '0')}`;
+
             let state = {
                 config: {}, proxies: [], characters: [], messages: [], transactions: [], currencies: [], schedules: [], emojiPacks: [], diaries: [],
                 currentTransaction: { type: 'expense', category: null, amountStr: '0', currency: 'RMB' },
                 currentSchedule: {},
                 calendarState: { year: new Date().getFullYear(), month: new Date().getMonth(), selectedDate: null, mode: 'deadline' },
-                ledgerFilters: { months: [], type: 'expense', categories: [] },
+                ledgerFilters: { months: [DEFAULT_LEDGER_MONTH], type: 'expense', categories: [] },
                 isSelectionMode: false,
                 selectedMessages: new Set(),
                 currentlyEditingMsgId: null,
@@ -107,6 +110,7 @@
                     userId: '',
                     userGender: '',
                     userBio: '',
+                    skipRegenerateConfirm: false,
                     systemPromptSettings: DEFAULT_SYSTEM_PROMPTS,
                     diaryPrompt: defaultDiaryPrompt // <--- 新增这一行
                 };

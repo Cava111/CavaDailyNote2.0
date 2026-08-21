@@ -908,10 +908,20 @@
                 const list = document.getElementById('month-filter-list');
                 list.innerHTML = '';
 
-                const availableMonths = [...new Set(state.transactions.map(t => {
+                const now = new Date();
+                const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const availableMonths = [...new Set([currentMonth, ...state.transactions.map(t => {
                     const d = new Date(t.timestamp);
                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                }))].sort().reverse();
+                })])].sort().reverse();
+
+                const allItem = document.createElement('div');
+                allItem.className = 'filter-item';
+                allItem.innerHTML = `
+                    <input type="checkbox" id="month-all" value="__all__" ${state.ledgerFilters.months.length === 0 ? 'checked' : ''}>
+                    <label for="month-all">全部月份</label>
+                `;
+                list.appendChild(allItem);
 
                 availableMonths.forEach(monthStr => {
                     const item = document.createElement('div');
@@ -923,6 +933,15 @@
                 `;
                     list.appendChild(item);
                 });
+
+                const allCheckbox = document.getElementById('month-all');
+                const monthCheckboxes = [...list.querySelectorAll('input[type="checkbox"]:not(#month-all)')];
+                allCheckbox.addEventListener('change', () => {
+                    if (allCheckbox.checked) monthCheckboxes.forEach(checkbox => { checkbox.checked = false; });
+                });
+                monthCheckboxes.forEach(checkbox => checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) allCheckbox.checked = false;
+                }));
                 modal.classList.add('visible');
             }
 

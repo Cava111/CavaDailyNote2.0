@@ -125,6 +125,7 @@
                     return;
                 }
 
+                const responseGroupId = `ai-response-${character.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
                 const now = new Date();
                 const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -154,12 +155,12 @@
                 try {
                     // 尝试调用主API
                     responseText = await callAPI(proxy, systemPrompt, history, character.model, character);
-                    await processAIResponse(responseText, thinkingBubbleId, character);
+                    await processAIResponse(responseText, thinkingBubbleId, character, responseGroupId);
                 } catch (mainError) {
                     console.error("Main API failed:", mainError);
 
                     // 2. 主API失败，将它的“思考中”气泡更新为错误信息，并【保留】它
-                    await updateThinkingBubble(thinkingBubbleId, `[主API错误: ${mainError.message}]`, character.id, true);
+                    await updateThinkingBubble(thinkingBubbleId, `[主API错误: ${mainError.message}]`, character.id, true, responseGroupId);
 
                     // 3. 检查是否有备用API，这里的 if/else 结构是修复语法错误的关键
                     if (backupProxy && character.backupModel) {
@@ -182,12 +183,12 @@
                             responseText = await callAPI(backupProxy, backupSystemPrompt, history, character.backupModel, character);
 
                             // 5. 【关键修改】备用API成功后，用它的结果更新【它自己】的“思考中”气泡
-                            await processAIResponse(responseText, backupBubbleId, character);
+                            await processAIResponse(responseText, backupBubbleId, character, responseGroupId);
 
                         } catch (backupError) {
                             console.error("Backup API also failed:", backupError);
                             // 6. 【关键修改】如果备用API也失败了，则更新【它自己】的“思考中”气泡为错误信息
-                            await updateThinkingBubble(backupBubbleId, `[备用API错误: ${backupError.message}]`, character.id, true);
+                            await updateThinkingBubble(backupBubbleId, `[备用API错误: ${backupError.message}]`, character.id, true, responseGroupId);
                         }
                     } else {
                         // 这个 else 块现在正确地跟在 if 后面
@@ -196,7 +197,7 @@
                 }
             }
 
-            async function processAIResponse(text, bubbleId, character) {
+            async function processAIResponse(text, bubbleId, character, responseGroupId) {
                 const aiReplies = text.split('\n').map(r => r.trim()).filter(Boolean);
 
                 if (aiReplies.length > 0) {
@@ -217,37 +218,38 @@
 
                             if (emoji) {
                                 if (isFirstMessage) {
-                                    await updateThinkingBubbleAsEmoji(bubbleId, emoji, character.id);
+                                    await updateThinkingBubbleAsEmoji(bubbleId, emoji, character.id, responseGroupId);
                                 } else {
-                                    await addAIEmojiMessage(emoji, character.id);
+                                    await addAIEmojiMessage(emoji, character.id, responseGroupId);
                                 }
                             }
 
                             const remainingText = reply.replace(emojiRegex, '').trim();
                             if (remainingText) {
-                                await addAIMessage(remainingText, character.id);
+                                await addAIMessage(remainingText, character.id, responseGroupId);
                             }
                         } else {
                             if (isFirstMessage) {
-                                await updateThinkingBubble(bubbleId, reply, character.id);  // 修复：添加 bubbleId
+                                await updateThinkingBubble(bubbleId, reply, character.id, false, responseGroupId);  // 修复：添加 bubbleId
                             } else {
-                                await addAIMessage(reply, character.id);
+                                await addAIMessage(reply, character.id, responseGroupId);
                             }
                         }
                     }
                 } else {
-                    await updateThinkingBubble(bubbleId, "[AI没有返回任何内容]", character.id, true);  // 修复：添加 bubbleId
+                    await updateThinkingBubble(bubbleId, "[AI没有返回任何内容]", character.id, true, responseGroupId);  // 修复：添加 bubbleId
                 }
             }
 
             // 添加新函数：
-            async function updateThinkingBubbleAsEmoji(bubbleId, emoji, senderId) {
+            async function updateThinkingBubbleAsEmoji(bubbleId, emoji, senderId, responseGroupId = null) {
                 const newMsgData = {
                     timestamp: Date.now(),
                     role: 'assistant',
                     content: `[emoji:${emoji.name}]`,
                     type: 'emoji_pack',
-                    senderId
+                    senderId,
+                    responseGroupId
                 };
                 const newId = await db.messages.add(newMsgData);
                 state.messages.push({ ...newMsgData, id: newId });
@@ -258,13 +260,14 @@
                 }
             }
 
-            async function addAIEmojiMessage(emoji, senderId) {
+            async function addAIEmojiMessage(emoji, senderId, responseGroupId = null) {
                 const newMsg = {
                     timestamp: Date.now(),
                     role: 'assistant',
                     content: `[emoji:${emoji.name}]`,
                     type: 'emoji_pack',
-                    senderId
+                    senderId,
+                    responseGroupId
                 };
                 const id = await db.messages.add(newMsg);
                 state.messages.push({ ...newMsg, id });
@@ -280,7 +283,8 @@
                 // 这个变量现在用来记录“上一个已处理消息的日期”
                 let processedDateStr = null;
 
-                for (const msg of reversedMessages) {
+                for (let messageOffset = 0; messageOffset < reversedMessages.length; messageOffset++) {
+                    const msg = reversedMessages[messageOffset];
                     let content;
                     let msgTokens = 0;
                     const role = msg.role === 'assistant' ? 'assistant' : 'user';
@@ -301,8 +305,13 @@
                         content = `[日程提醒-${eventTypeStr}] 我定了个${eventTypeStr}：'${s.title}'。重要程度是 ${s.importance.toFixed(1)}/10，截止日期是 ${deadlineStr}，${descriptionText}，当前状态：${statusText}。`;
                         msgTokens = content.length * 2;
                     } else if (msg.type === 'image') {
-                        content = [{ type: "image_url", image_url: { url: msg.content } }];
-                        msgTokens = 1000;
+                        if (messageOffset < 5) {
+                            content = [{ type: "image_url", image_url: { url: msg.content } }];
+                            msgTokens = 1000;
+                        } else {
+                            content = '[image]';
+                            msgTokens = content.length * 2;
+                        }
                     } else if (msg.type === 'emoji_pack') {
                         const match = msg.content.match(/\[emoji:(.*?)\]/);
                         if (match) {
@@ -413,8 +422,8 @@
                 return data.choices[0].message.content;
             }
 
-            async function addAIMessage(content, senderId = null) {
-                const newMsg = { timestamp: Date.now(), role: 'assistant', content, type: 'text', senderId };
+            async function addAIMessage(content, senderId = null, responseGroupId = null) {
+                const newMsg = { timestamp: Date.now(), role: 'assistant', content, type: 'text', senderId, responseGroupId };
                 const id = await db.messages.add(newMsg);
                 state.messages.push({ ...newMsg, id });
                 renderChatMessages();
@@ -427,8 +436,8 @@
                 return bubbleId;
             }
 
-            async function updateThinkingBubble(bubbleId, content, senderId, isError = false) {
-                const newMsgData = { timestamp: Date.now(), role: 'assistant', content, type: 'text', senderId };
+            async function updateThinkingBubble(bubbleId, content, senderId, isError = false, responseGroupId = null) {
+                const newMsgData = { timestamp: Date.now(), role: 'assistant', content, type: 'text', senderId, responseGroupId };
                 const newId = await db.messages.add(newMsgData);
                 state.messages.push({ ...newMsgData, id: newId });
                 const bubbleWrapper = document.getElementById(bubbleId);

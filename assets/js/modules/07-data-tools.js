@@ -4,7 +4,7 @@
                 const monthModal = document.getElementById('ledger-month-filter-modal');
                 const selectedMonths = [];
                 monthModal.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
-                    selectedMonths.push(cb.value);
+                    if (cb.value !== '__all__') selectedMonths.push(cb.value);
                 });
                 state.ledgerFilters.months = selectedMonths;
 
