@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cava记事本1.3.5beta</title>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <link rel="stylesheet" href="assets/css/base.css">
+    <link rel="stylesheet" href="assets/css/chat.css">
+    <link rel="stylesheet" href="assets/css/ledger.css">
+    <link rel="stylesheet" href="assets/css/schedule.css">
+    <link rel="stylesheet" href="assets/css/settings.css">
+    <link rel="stylesheet" href="assets/css/modals.css">
+    <link rel="stylesheet" href="assets/css/markdown.css">
+</head>
+
+<body data-theme="default">
+    <!-- Inline SVG sprite: keeps icons working when index.html is opened from the local file system. -->
+    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:none">
+      <defs>
+        <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+        <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H19a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5.5A2.5 2.5 0 0 1 3 17.5v-11Z"/><path d="M3 7h16M16 14h3"/></symbol>
+        <symbol id="icon-notebook" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v15a1 1 0 0 1-1.5.87L12 18l-5.5 2.87A1 1 0 0 1 5 20V5a2 2 0 0 1 1-2Z"/><path d="M9 7h6M9 11h6"/></symbol>
+        <symbol id="icon-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></symbol>
+        <symbol id="icon-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.2 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></symbol>
+        <symbol id="icon-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M8 12h.01M16 12h.01M8 16h8"/><circle cx="12" cy="3" r="1"/></symbol>
+        <symbol id="icon-forward" viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></symbol>
+        <symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="m7 15 4-4 3 2 5-6"/></symbol>
+        <symbol id="icon-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".8" fill="currentColor"/><circle cx="4" cy="12" r=".8" fill="currentColor"/><circle cx="4" cy="18" r=".8" fill="currentColor"/></symbol>
+        <symbol id="icon-trend-up" viewBox="0 0 24 24"><path d="M4 16 10 10l4 4 6-7"/><path d="M15 7h5v5"/></symbol>
+        <symbol id="icon-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></symbol>
+        <symbol id="icon-message" viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 9.3 9.3 0 0 1-3.7-.8L4 20l1.2-4A7 7 0 0 1 4 12a7.5 7.5 0 0 1 8-7.5 7.5 7.5 0 0 1 8 7Z"/></symbol>
+        <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19h16M8 7h8M8 11h8"/></symbol>
+        <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
+        <symbol id="icon-calendar-check" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18m5 5-4 4-2-2"/></symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.52a2 2 0 0 1-1 1.73l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.73v-.52a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="icon-message-filled" viewBox="0 0 24 24"><path d="M20.5 11.7c0 4.4-3.8 7.8-8.5 7.8-1.3 0-2.6-.3-3.7-.8L4 20.5l1.2-4.1A7.4 7.4 0 0 1 3.5 12c0-4.4 3.8-7.8 8.5-7.8s8.5 3.2 8.5 7.5Z" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="var(--bg-secondary)" stroke="none"/><circle cx="15" cy="12" r="1" fill="var(--bg-secondary)" stroke="none"/></symbol>
+        <symbol id="icon-book-filled" viewBox="0 0 24 24"><path d="M6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22.5v-17A2.5 2.5 0 0 1 6.5 3Z" fill="currentColor" stroke="none"/><path d="M4 19.3h16M8 7.5h8M8 11.5h7" fill="none" stroke="var(--bg-secondary)" stroke-width="1.6" stroke-linecap="round"/></symbol>
+        <symbol id="icon-calendar-filled" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5" fill="currentColor" stroke="none"/><path d="M3 9.5h18" fill="none" stroke="var(--bg-secondary)" stroke-width="1.6"/><path d="M7.5 2.5v4M16.5 2.5v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="7" y="13" width="3" height="3" rx=".7" fill="var(--bg-secondary)" stroke="none"/><rect x="14" y="13" width="3" height="3" rx=".7" fill="var(--bg-secondary)" stroke="none"/></symbol>
+        <symbol id="icon-settings-filled" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.52a2 2 0 0 1-1 1.73l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.73v-.52a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="3.15" fill="var(--bg-secondary)" stroke="none"/></symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24"><path d="m4 20 4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m13.5 7.5 3 3M4 20h16"/></symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v5M14 11v5"/></symbol>
+        <symbol id="icon-check-square" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4.2 4.2L19 6.5"/></symbol>
+        <symbol id="icon-diary" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v15a1 1 0 0 1-1.5.87L12 18l-5.5 2.87A1 1 0 0 1 5 20V5a2 2 0 0 1 1-2Z"/><path d="m9 13 5-5 2 2-5 5-3 1Z"/></symbol>
+        <symbol id="icon-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+        <symbol id="icon-backspace" viewBox="0 0 24 24"><path d="M20 5H9l-6 7 6 7h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1Z"/><path d="m10 9 5 6m0-6-5 6"/></symbol>
+        <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9-9-9Z"/><circle cx="8" cy="8" r="1" fill="currentColor"/></symbol>
+        <symbol id="icon-circle-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.7 1.8c-1.5 1.1-1.5 1.7-1.5 2.7M12 16.5h.01"/></symbol>
+        <symbol id="icon-utensils" viewBox="0 0 24 24"><path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3m-3 8v10M16 3v18m0-18c3 1 4 4 4 7h-4"/></symbol>
+        <symbol id="icon-shopping-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></symbol>
+        <symbol id="icon-bus" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="3"/><path d="M4 13h16M8 7h8M7 19l-1 2m11-2 1 2"/><circle cx="8" cy="16" r="1" fill="currentColor"/><circle cx="16" cy="16" r="1" fill="currentColor"/></symbol>
+        <symbol id="icon-film" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18M16 3v18M4 8h4m8 0h4M4 16h4m8 0h4"/></symbol>
+        <symbol id="icon-gamepad" viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 3.8 2.8l1 3.4A2.8 2.8 0 0 1 17.2 18l-2.2-2H9l-2.2 2a2.8 2.8 0 0 1-4.6-2.8l1-3.4A4 4 0 0 1 7 9Z"/><path d="M7 12v4m-2-2h4M16 13h.01M18 15h.01"/></symbol>
+        <symbol id="icon-house" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 21v-6h6v6"/></symbol>
+        <symbol id="icon-heart-pulse" viewBox="0 0 24 24"><path d="M20.8 5.8a5.2 5.2 0 0 0-7.4 0L12 7.2l-1.4-1.4a5.2 5.2 0 0 0-7.4 7.4L12 22l8.8-8.8a5.2 5.2 0 0 0 0-7.4Z"/><path d="M4 13h3l1.5-3 3 6 1.5-3H17"/></symbol>
+        <symbol id="icon-gift" viewBox="0 0 24 24"><path d="M4 10h16v11H4zM3 6h18v4H3zM12 6v15"/><path d="M12 6H8.5A2.5 2.5 0 1 1 11 3.5L12 6Zm0 0h3.5A2.5 2.5 0 1 0 13 3.5L12 6Z"/></symbol>
+        <symbol id="icon-graduation-cap" viewBox="0 0 24 24"><path d="m3 10 9-5 9 5-9 5Z"/><path d="M7 13v4c3 2 7 2 10 0v-4M21 10v6"/></symbol>
+        <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M5 3h14v18l-2-1.5-2 1.5-3-1.5-3 1.5-2-1.5L5 21Z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+        <symbol id="icon-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/></symbol>
+        <symbol id="icon-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m9 13-2 8 5-3 5 3-2-8"/><path d="m10 8 1.2 1.2L14 6.5"/></symbol>
+        <symbol id="icon-hand-coins" viewBox="0 0 24 24"><path d="M4 18h3l2-3h5a2 2 0 0 0 0-4h-4l-1-1H6l-3 3"/><path d="M15 7h5M17.5 4.5v5"/><circle cx="17.5" cy="7" r="3.5"/></symbol>
+      </defs>
+    </svg>
+    <div id="app-container">
+        <div id="sidebar-overlay"></div>
+        <div id="chat-sidebar">
+            <div class="sidebar-header">聊天助手</div>
+            <div class="sidebar-content">
+                <div class="sidebar-item">
+                    <label>当前上下文 Tokens</label>
+                    <div id="sidebar-token-count" class="value">0</div>
+                </div>
+                <button class="form-button secondary" id="preview-context-btn">预览上下文</button>
+                <pre id="sidebar-preview-content"></pre>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Page 1: Accounting (Chat) -->
+            <div id="accounting-screen" class="page active">
+                <div class="header">
+                    <div class="left-action"><span class="action-btn" id="chat-settings-btn">≡</span></div>
+                    <div class="center-title"><span id="chat-header-title">我的记事本</span></div>
+                    <div class="right-action"></div>
+                </div>
+                <div id="chat-messages"></div>
+                <div id="selection-action-bar">
+                    <button id="delete-selected-btn">删除</button>
+                    <button id="cancel-selection-btn">取消</button>
+                </div>
+                <div id="chat-input-area">
+                    <div id="chat-character-bar" role="list" aria-label="选择回复的 AI 角色"></div>
+                    <div id="chat-actions-bar" hidden>
+                        <button class="chat-more-action" id="image-upload-btn" type="button">
+                            <span class="chat-more-action-icon"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-image"></use></svg></span>
+                            <span>发图</span>
+                        </button>
+                        <button class="chat-more-action" id="chat-add-transaction-btn" type="button">
+                            <span class="chat-more-action-icon"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-wallet"></use></svg></span>
+                            <span>记账</span>
+                        </button>
+                        <button class="chat-more-action" id="chat-add-schedule-btn" type="button">
+                            <span class="chat-more-action-icon"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-notebook"></use></svg></span>
+                            <span>记 TODO</span>
+                        </button>
+                    </div>
+                    <div id="chat-text-input-bar">
+                        <input type="file" id="image-upload-input" accept="image/*" style="display:none;">
+                        <button class="chat-input-icon-btn" id="emoji-pack-btn" type="button" title="发表情" aria-label="发表情">
+                            <svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-smile"></use></svg>
+                        </button>
+                        <textarea id="chat-input" rows="1" placeholder="说点什么..."></textarea>
+                        <button class="chat-input-icon-btn chat-more-btn" id="chat-more-btn" type="button" title="更多" aria-label="打开更多功能" aria-expanded="false">＋</button>
+                        <button id="send-btn" type="button" disabled hidden>发送</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 2: Ledger -->
+            <div id="ledger-screen" class="page">
+                <div class="header">
+                    <div class="left-action"></div>
+                    <div class="center-title"><span>我的账本</span></div>
+                    <div class="right-action"><span class="action-btn" id="forward-ledger-btn" title="同步账本"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-forward"></use></svg></span></div>
+                </div>
+                <div class="ledger-controls">
+                    <button class="filter-btn" id="ledger-month-filter-btn">月份筛选</button>
+                    <button class="filter-btn" id="ledger-category-filter-btn">分类筛选</button>
+                    <select id="ledger-type-filter"
+                        style="border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary); border-radius: 8px; padding: 6px 10px; font-size: 14px; flex-grow: 1;">
+                        <option value="all">全部</option>
+                        <option value="expense">只看支出</option>
+                        <option value="income">只看收入</option>
+                    </select>
+                    <select id="ledger-sort">
+                        <option value="time_desc">时间倒序</option>
+                        <option value="time_asc">时间正序</option>
+                        <option value="amount_desc">金额倒序</option>
+                        <option value="amount_asc">金额正序</option>
+                    </select>
+                </div>
+                <div class="page-content" id="ledger-page-content">
+                    <div id="ledger-view-wrapper">
+                        <div id="ledger-list-view">
+                            <ul id="ledger-list"></ul>
+                            <div id="ledger-summary"></div>
+                        </div>
+                        <div id="ledger-chart-view">
+                            <div id="pie-chart-tooltip"></div>
+                            <div class="pie-chart-area">
+                                <div class="pie-chart-title-wrapper">
+                                    <h3 class="pie-chart-title">支出</h3>
+                                    <p class="pie-chart-subtitle" id="expense-pie-subtitle"></p>
+                                </div>
+                                <svg id="expense-pie-chart"></svg>
+                                <div class="pie-legend" id="expense-pie-legend"></div>
+                            </div>
+                            <div class="pie-chart-area">
+                                <div class="pie-chart-title-wrapper">
+                                    <h3 class="pie-chart-title">收入</h3>
+                                    <p class="pie-chart-subtitle" id="income-pie-subtitle"></p>
+                                </div>
+                                <svg id="income-pie-chart"></svg>
+                                <div class="pie-legend" id="income-pie-legend"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ledger-footer-controls">
+                    <select id="ledger-currency"></select>
+                    <button id="toggle-ledger-view-btn">图表 <svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-chart"></use></svg></button>
+                    <div id="ledger-count" class="ledger-count">已记账0笔 <svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-trend-up"></use></svg></div>
+                </div>
+            </div>
+
+            <!-- Page 3: Schedule (NEW SWIPE LAYOUT) -->
+            <div id="schedule-screen" class="page">
+                <div class="header">
+                    <div class="left-action"></div>
+                    <div class="center-title"><span id="schedule-page-title">今日待办</span></div>
+                    <div class="right-action">
+                        <select id="schedule-forward-select"
+                            style="border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary); border-radius: 8px; padding: 4px 8px; font-size: 14px;">
+                            <option value="">同步选项</option>
+                            <option value="today">今日待办</option>
+                            <option value="calendar">日历视图</option>
+                            <option value="all">全部日程</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="schedule-swipe-container">
+                    <div class="schedule-pages-wrapper">
+                        <!-- Page 1: 今日待办 -->
+                        <div class="schedule-page" id="schedule-today-page">
+                            <div class="page-content" id="today-tasks-content">
+                                <!-- Today's tasks will be rendered here by JS -->
+                            </div>
+                        </div>
+                        <!-- Page 2: 原日程四象限页面 -->
+                        <div class="schedule-page" id="schedule-main-page">
+                            <div class="page-content">
+                                <div class="schedule-section">
+                                    <div class="schedule-section-title">待完成</div>
+                                    <div class="schedule-quadrant" id="quadrant-1">
+                                        <div class="quadrant-header">
+                                            <div class="quadrant-title">重要且紧急</div>
+                                        </div>
+                                        <div class="schedule-items" id="quadrant-1-items"></div>
+                                    </div>
+                                    <div class="schedule-quadrant" id="quadrant-2">
+                                        <div class="quadrant-header">
+                                            <div class="quadrant-title">重要不紧急</div>
+                                        </div>
+                                        <div class="schedule-items" id="quadrant-2-items"></div>
+                                    </div>
+                                    <div class="schedule-quadrant" id="quadrant-3">
+                                        <div class="quadrant-header">
+                                            <div class="quadrant-title">紧急不重要</div>
+                                        </div>
+                                        <div class="schedule-items" id="quadrant-3-items"></div>
+                                    </div>
+                                    <div class="schedule-quadrant" id="quadrant-4">
+                                        <div class="quadrant-header">
+                                            <div class="quadrant-title">不紧急不重要</div>
+                                        </div>
+                                        <div class="schedule-items" id="quadrant-4-items"></div>
+                                    </div>
+                                </div>
+                                <div class="schedule-section">
+                                    <div class="schedule-section-title">已完成</div>
+                                    <div class="schedule-items" id="completed-items"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Page 3: 月历 -->
+                        <div class="schedule-page" id="schedule-calendar-page">
+                            <div class="page-content">
+                                <div id="month-calendar-view"></div>
+                                <div id="calendar-event-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-page-dots">
+                    <span class="dot active" data-index="0"></span>
+                    <span class="dot" data-index="1"></span>
+                    <span class="dot" data-index="2"></span>
+                </div>
+                <div id="schedule-count" class="schedule-count">已完成0项事件 <svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></div>
+            </div>
+
+            <!-- Page 4: More/Settings -->
+            <div id="more-screen" class="page">
+                <div class="header">
+                    <div class="left-action"></div>
+                    <div class="center-title"><span>设置</span></div>
+                    <div class="right-action"></div>
+                </div>
+                <div class="page-content">
+                    <div class="setting-group">
+                        <div class="setting-group-title">外观设置</div>
+                        <div class="form-group">
+                            <label>主题选择</label>
+                            <div class="theme-selector">
+                                <label class="theme-option"><input type="radio" name="theme" value="default" checked>
+                                    <div class="swatch default"></div><span class="label">暖阳甜杏</span>
+                                </label>
+                                <label class="theme-option"><input type="radio" name="theme" value="blue">
+                                    <div class="swatch blue"></div><span class="label">晴空苏打</span>
+                                </label>
+                                <label class="theme-option"><input type="radio" name="theme" value="green">
+                                    <div class="swatch green"></div><span class="label">薄荷微风</span>
+                                </label>
+                                <label class="theme-option"><input type="radio" name="theme" value="purple">
+                                    <div class="swatch purple"></div><span class="label">紫藤幻梦</span>
+                                </label>
+                                <label class="theme-option"><input type="radio" name="theme" value="pink">
+                                    <div class="swatch pink"></div><span class="label">樱落星辰</span>
+                                </label>
+                                <label class="theme-option"><input type="radio" name="theme" value="gray">
+                                    <div class="swatch gray"></div><span class="label">静谧书影</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>聊天背景</label>
+                            <div class="avatar-upload"><button
+                                    onclick="document.getElementById('setting-chat-bg-input').click()">上传</button><button
+                                    id="remove-bg-btn"
+                                    style="background-color: var(--expense-color); color: white;">移除背景</button><input
+                                    type="file" id="setting-chat-bg-input" accept="image/*"></div>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <div class="setting-group-title">我的资料</div>
+                        <div class="form-group"><label>群聊名称</label><input type="text" id="setting-chat-name"></div>
+                        <div class="form-group"><label>头像</label>
+                            <div class="avatar-upload"><img id="setting-chat-avatar-preview"><button
+                                    id="upload-user-avatar-btn">上传</button><input type="file"
+                                    id="setting-chat-avatar-input" accept="image/*"></div>
+                        </div>
+                        <div class="form-group"><label>ID</label><input type="text" id="setting-user-id"
+                                placeholder="可选填"></div>
+                        <div class="form-group"><label>性别</label><select id="setting-user-gender">
+                                <option value="">未设置</option>
+                                <option value="male">男</option>
+                                <option value="female">女</option>
+                            </select></div>
+                        <div class="form-group"><label>个人说明</label><textarea id="setting-user-bio"
+                                placeholder="可选填"></textarea></div>
+                    </div>
+                    <div class="setting-group">
+                        <div class="setting-group-title">AI 设置</div>
+                        <div class="form-group"><label for="max-tokens-input">最大上下文长度 (Token)</label><input
+                                type="number" id="max-tokens-input" placeholder="建议 4000-8000"></div>
+                        <p style="font-size:12px; color: var(--text-secondary); margin-top:-10px; margin-bottom: 15px;">
+                            此设置用于限制发送给AI的聊天记录长度，防止超出模型限制。1个汉字约等于2个Token。</p>
+                        <button class="form-button secondary" id="manage-system-prompts-btn">管理系统提示词</button>
+                        <button class="form-button secondary" id="manage-proxies-btn">管理API反代</button>
+                        <button class="form-button secondary" id="manage-characters-btn">管理AI角色</button>
+                        <button class="form-button secondary" id="manage-emoji-packs-btn">管理我的表情包</button>
+                    </div>
+                    <div class="setting-group">
+                        <div class="setting-group-title">币种设置</div>
+                        <button class="form-button secondary" id="manage-currencies-btn">管理币种和汇率</button>
+                    </div>
+                    <div class="setting-group">
+                        <div class="setting-group-title">记录管理</div>
+                        <button class="form-button secondary" id="export-json-btn">导出为 JSON</button>
+                        <button class="form-button secondary" id="import-json-btn">从 JSON 导入</button>
+                        <input type="file" id="import-json-input" accept=".json" style="display:none;">
+                        <button class="form-button secondary" id="export-txt-btn">导出为 TXT</button>
+                    </div>
+                    <p style="text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-secondary);">
+                        Technical support from Cava, Claude & Gemini</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Input Panel -->
+        <div id="transaction-panel">
+            <div class="panel-header">
+                <span class="close-btn" id="close-transaction-panel" title="关闭"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-x"></use></svg></span>
+                <span style="font-weight: 600;" id="transaction-panel-title">新建记账</span>
+                <span id="template-dropdown-btn"
+                    style="margin-left: 5px; color: var(--text-secondary); cursor: pointer; font-size: 12px;">ˇ</span>
+                <div id="template-menu"
+                    style="display: none; position: absolute; top: 40px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-medium); padding: 8px; z-index: 201; min-width: 200px;">
+                    <div id="template-list"></div>
+                    <button
+                        style="width: 100%; padding: 8px; border: none; background: var(--bg-soft); border-radius: 6px; margin-top: 8px;"
+                        id="save-as-template-btn">保存为模板</button>
+                </div>
+            </div>
+            <div id="amount-display-container"><span id="currency-selector">RMB</span>
+                <div id="amount-display">0.00</div>
+            </div>
+            <div class="type-selector"><button id="type-expense-btn" class="active">支出</button><button
+                    id="type-income-btn">收入</button></div>
+            <div id="category-selector"></div>
+            <div class="transaction-remark-section">
+                <input type="text" id="transaction-remark-input" placeholder="添加备注（可选）">
+            </div>
+            <div id="numpad-container">
+                <div class="numpad"><button data-key="1">1</button><button data-key="2">2</button><button
+                        data-key="3">3</button><button data-key="4">4</button><button data-key="5">5</button><button
+                        data-key="6">6</button><button data-key="7">7</button><button data-key="8">8</button><button
+                        data-key="9">9</button><button class="zero" data-key="0">0</button><button
+                        data-key=".">.</button></div>
+                <div class="numpad-actions" id="numpad-actions"><button id="numpad-delete" title="删除一位"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-backspace"></use></svg></button><button
+                        id="numpad-confirm" class="confirm">完成</button></div>
+            </div>
+        </div>
+
+        <!-- Schedule Input Panel -->
+        <div id="schedule-panel">
+            <div class="panel-header">
+                <span class="close-btn" id="close-schedule-panel" title="关闭"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-x"></use></svg></span>
+                <span style="font-weight: 600;" id="schedule-panel-title">新建日程</span>
+            </div>
+            <div class="schedule-form">
+                <div class="schedule-form-section red">
+                    <label>事项类别</label>
+                    <div class="event-type-toggle">
+                        <button id="schedule-type-once" class="active">单次事件</button>
+                        <button id="schedule-type-long">长期事件</button>
+                    </div>
+                </div>
+                <div class="schedule-form-section green" id="recurrence-section" style="display: none;">
+                    <label>重复周期</label>
+                    <div id="recurrence-options">
+                        <button data-type="daily">每天</button>
+                        <button data-type="weekly">每周</button>
+                        <button data-type="monthly">每月</button>
+                    </div>
+                    <div id="recurrence-selector-days" style="margin-top: 10px;"></div>
+                </div>
+                <div class="schedule-form-section blue">
+                    <label>标题</label>
+                    <input type="text" id="schedule-title-input" placeholder="输入事件标题">
+                </div>
+                <div class="schedule-form-section pink">
+                    <label>重要程度</label>
+                    <div class="importance-stars" id="importance-stars">
+                        <span class="star" data-value="1"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></span>
+                        <span class="star" data-value="2"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></span>
+                        <span class="star" data-value="3"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></span>
+                        <span class="star" data-value="4"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></span>
+                        <span class="star" data-value="5"><svg class="svg-icon" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></span>
+                        <span class="importance-score" id="importance-score">0.0</span>
+                    </div>
+                </div>
+                <div class="schedule-form-section purple">
+                    <label id="deadline-label">截止日期</label>
+                    <div class="deadline-inputs">
+                        <span id="deadline-display-text">选择日期</span>
+                        <div class="time-input-part">
+                            <input type="number" id="deadline-hour-input" class="time-input" placeholder="时">
+                            <span class="time-separator">:</span>
+                            <input type="number" id="deadline-minute-input" class="time-input" placeholder="分">
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-form-section purple" id="end-date-section" style="display: none;">
+                    <label>结束日期</label>
+                    <div class="deadline-inputs">
+                        <span id="end-date-display-text">永不结束</span>
+                    </div>
+                </div>
+                <div class="schedule-form-section blue">
+                    <label>具体说明</label>
+                    <textarea id="schedule-description-input" placeholder="输入具体说明（可选）"></textarea>
+                </div>
+            </div>
+            <div class="schedule-actions">
+                <button class="cancel-btn" id="cancel-schedule-btn">取消</button>
+                <button class="confirm-btn" id="confirm-schedule-btn">确定</button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div id="bottom-nav">
+            <div class="nav-item active" data-page="accounting-screen">
+                <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-message"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-message-filled"></use></svg></div>
+                <div class="label">记事</div>
+            </div>
+            <div class="nav-item" data-page="ledger-screen">
+                <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-book"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-book-filled"></use></svg></div>
+                <div class="label">账本</div>
+            </div>
+            <div class="nav-item" data-page="schedule-screen">
+                <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-calendar"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-calendar-filled"></use></svg></div>
+                <div class="label">日程</div>
+            </div>
+            <div class="nav-item" data-page="more-screen">
+                <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-settings"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-settings-filled"></use></svg></div>
+                <div class="label">设置</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="calendar-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="calendar-header"><button id="prev-month-btn">&lt;</button><span id="calendar-month-year"
+                        class="calendar-month-year"></span><button id="next-month-btn">&gt;</button></div>
+                <div class="calendar-weekdays">
+                    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                </div>
+                <div class="calendar-grid" id="calendar-grid"></div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn" id="clear-date-btn">清除日期</button><button
+                    class="cancel-btn" id="close-calendar-btn">关闭</button></div>
+        </div>
+    </div>
+    <div id="api-proxy-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">管理API反代</div>
+            <div class="modal-body">
+                <div id="proxy-list"></div><button class="form-button" id="add-proxy-btn">＋ 添加新反代</button>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn" id="close-proxy-modal">关闭</button></div>
+        </div>
+    </div>
+    <div id="proxy-editor-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header" id="proxy-editor-title">编辑反代</div>
+            <div class="modal-body">
+                <div class="form-group"><label>自定义名称</label><input type="text" id="proxy-editor-name"
+                        placeholder="如 Cava的API"></div>
+                <div class="form-group"><label>URL (无需 /v1)</label><input type="text" id="proxy-editor-url"></div>
+                <div class="form-group"><label>API Key</label><input type="password" id="proxy-editor-apikey"></div>
+                <div class="form-group"><label>Model(s) (换行分隔)</label><textarea id="proxy-editor-models" rows="3"
+                        placeholder="gpt-4o&#10;claude-3-opus-20240229"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">保存</button></div>
+        </div>
+    </div>
+    <div id="ai-character-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">管理AI角色</div>
+            <div class="modal-body">
+                <div id="character-list"></div><button class="form-button" id="add-character-btn">＋ 添加新角色</button>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn" id="close-character-modal">关闭</button></div>
+        </div>
+    </div>
+    <div id="character-editor-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header" id="character-editor-title">编辑角色</div>
+            <div class="modal-body">
+                <div class="form-group"><label>角色名称</label><input type="text" id="character-editor-name"></div>
+                <div class="form-group"><label>角色头像</label>
+                    <div class="avatar-upload"><img id="character-editor-avatar-preview"><button
+                            id="upload-char-avatar-btn">上传</button><input type="file" id="character-editor-avatar-input"
+                            accept="image/*"></div>
+                </div>
+                <div class="form-group"><label>Prompt (人设)</label><textarea id="character-editor-prompt"
+                        rows="5"></textarea></div>
+                <div class="form-group"><label>主用API</label><select id="character-editor-proxy"></select></div>
+                <div class="form-group"><label>主用模型</label><select id="character-editor-model"></select></div>
+                <div class="form-group"><label>备用API (可选)</label><select id="character-editor-backup-proxy"></select>
+                </div>
+                <div class="form-group"><label>备用模型</label><select id="character-editor-backup-model"></select></div>
+                <div class="form-group"
+                    style="margin-top:20px; border-top: 1px dashed var(--border-color); padding-top:15px;">
+                    <label id="toggle-advanced-settings-btn"
+                        style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                        <span>高级参数设置</span>
+                        <span id="char-advanced-arrow" style="font-size: 18px; font-weight: bold;">▼</span>
+                    </label>
+                </div>
+
+                <div id="character-advanced-settings"
+                    style="display: none; padding-left: 10px; padding-right: 10px; border-left: 2px solid var(--accent-primary);">
+
+                    <div class="form-group">
+                        <label>参数预设模式</label>
+                        <select id="character-param-mode"
+                            style="width:100%; padding: 8px; border-radius: 5px; border: 1px solid var(--accent-primary);">
+                            <option value="default">默认 (均衡)</option>
+                            <option value="assist">协助模式 (精准稳定)</option>
+                            <option value="companion">陪伴模式 (创意发散)</option>
+                            <option value="custom">自定义参数</option>
+                        </select>
+                    </div>
+
+                    <div id="character-custom-params" style="display: none;">
+                        <div class="form-group">
+                            <label>温度 (Temperature): <span id="char-temp-value">0.8</span></label>
+                            <input type="range" id="char-temperature" min="0" max="2" step="0.1" value="0.8"
+                                class="ai-slider">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Top P: <span id="char-topp-value">0.95</span></label>
+                            <input type="range" id="char-top-p" min="0" max="1" step="0.05" value="0.95"
+                                class="ai-slider">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Top K: <span id="char-topk-value">0</span></label>
+                            <input type="range" id="char-top-k" min="0" max="100" step="1" value="0" class="ai-slider">
+                        </div>
+
+                        <div class="form-group">
+                            <label>频率惩罚 (Frequency): <span id="char-freq-value">0</span></label>
+                            <input type="range" id="char-freq-penalty" min="-2" max="2" step="0.1" value="0"
+                                class="ai-slider">
+                        </div>
+
+                        <div class="form-group">
+                            <label>存在惩罚 (Presence): <span id="char-pres-value">0</span></label>
+                            <input type="range" id="char-presence-penalty" min="-2" max="2" step="0.1" value="0"
+                                class="ai-slider">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">保存</button></div>
+        </div>
+    </div>
+    <div id="ai-character-selector-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">选择发言角色</div>
+            <div class="modal-body" id="ai-character-selector"></div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button></div>
+        </div>
+    </div>
+    <div id="message-action-menu" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-body"><button id="multi-select-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-check-square"></use></svg> 多选</button><button id="edit-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-edit"></use></svg>
+                    编辑</button><button id="edit-ai-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-edit"></use></svg> 编辑</button><button id="copy-message-btn"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-copy"></use></svg>
+                    复制</button><button id="delete-message-btn" class="danger"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-trash"></use></svg> 删除</button></div>
+            <div class="modal-footer" style="padding-top:0;"><button class="cancel-btn" style="width:100%;">取消</button>
+            </div>
+        </div>
+    </div>
+    <div id="schedule-detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">日程详情</div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <div class="detail-label">标题</div>
+                    <div class="detail-value" id="detail-title"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">说明</div>
+                    <div class="detail-value" id="detail-description"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">重要程度</div>
+                    <div class="detail-value" id="detail-importance"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">截止日期</div>
+                    <div class="detail-value" id="detail-deadline"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">事件类型</div>
+                    <div class="detail-value" id="detail-type"></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn" id="edit-schedule-btn">编辑</button><button
+                    class="cancel-btn" style="background-color: var(--expense-color); color: white;"
+                    id="delete-schedule-btn">删除</button><button class="cancel-btn"
+                    id="close-schedule-detail-modal">关闭</button></div>
+        </div>
+    </div>
+    <div id="cropper-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">裁剪头像</div>
+            <div class="modal-body">
+                <div id="cropper-image-container"><img id="cropper-image"></div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">确定</button></div>
+        </div>
+    </div>
+    <div id="currency-list-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">管理币种</div>
+            <div class="modal-body">
+                <div id="currency-list"></div><button class="form-button" id="add-currency-btn">＋ 添加新币种</button>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn" id="close-currency-list-modal">关闭</button></div>
+        </div>
+    </div>
+    <div id="currency-editor-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header" id="currency-editor-title">编辑币种</div>
+            <div class="modal-body">
+                <div class="form-group"><label>币种代码 (3位大写字母)</label><input type="text" id="currency-editor-code"
+                        placeholder="例如: HKD, USD" maxlength="3" style="text-transform:uppercase;"></div>
+                <div class="form-group"><label>币种名称</label><input type="text" id="currency-editor-name"
+                        placeholder="例如: 港币, 美元"></div>
+                <div class="form-group"><label>对 RMB 的汇率 (1 币种 = ? RMB)</label><input type="number"
+                        id="currency-editor-rate" placeholder="例如: 0.92"></div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">保存</button></div>
+        </div>
+    </div>
+    <div id="system-prompts-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">管理系统提示词</div>
+            <div class="modal-body">
+                <div class="setting-group" style="margin-bottom: 15px;">
+                    <div class="setting-group-title" style="margin-bottom: 10px;">附加信息</div>
+                    <div class="toggle-switch"><label for="system-prompt-send-time">发送当前时间</label><label
+                            class="switch"><input type="checkbox" id="system-prompt-send-time"><span
+                                class="slider"></span></label></div>
+                    <div class="toggle-switch"><label for="system-prompt-send-model">发送当前模型</label><label
+                            class="switch"><input type="checkbox" id="system-prompt-send-model"><span
+                                class="slider"></span></label></div>
+                    <div class="toggle-switch"><label for="system-prompt-send-role">发送AI角色名</label><label
+                            class="switch"><input type="checkbox" id="system-prompt-send-role"><span
+                                class="slider"></span></label></div>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-group-title">同步提示词模板</div>
+                    <div class="form-group" style="margin-bottom: 10px;"><label
+                            for="system-prompt-ledger">同步账本</label><textarea id="system-prompt-ledger"
+                            rows="2"></textarea></div>
+                    <div class="form-group" style="margin-bottom: 10px;"><label
+                            for="system-prompt-schedule">同步日程</label><textarea id="system-prompt-schedule"
+                            rows="2"></textarea></div>
+                    <div class="form-group"><label for="system-prompt-pie">同步图表</label><textarea id="system-prompt-pie"
+                            rows="2"></textarea></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">保存</button></div>
+        </div>
+    </div>
+    <div id="ledger-month-filter-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">选择月份</div>
+            <div class="modal-body">
+                <div class="filter-list" id="month-filter-list"></div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">确定</button></div>
+        </div>
+    </div>
+    <div id="ledger-category-filter-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">选择分类</div>
+            <div class="modal-body">
+                <div class="filter-tabs">
+                    <div class="filter-tab active" data-type="expense">支出</div>
+                    <div class="filter-tab" data-type="income">收入</div>
+                </div>
+                <div class="filter-list" id="category-filter-list"></div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">确定</button></div>
+        </div>
+    </div>
+    <!-- 替换为这段 -->
+    <div id="ledger-detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">记账详情</div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <div class="detail-label">类型</div>
+                    <div class="detail-value" id="ledger-detail-type"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">分类</div>
+                    <div class="detail-value" id="ledger-detail-category"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">金额</div>
+                    <div class="detail-value" id="ledger-detail-amount"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">备注</div>
+                    <div class="detail-value" id="ledger-detail-remark"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">时间</div>
+                    <div class="detail-value" id="ledger-detail-time"></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="cancel-btn" id="edit-ledger-btn">编辑</button><button
+                    class="cancel-btn" style="background-color: var(--expense-color); color: white;"
+                    id="delete-ledger-btn">删除</button><button class="cancel-btn"
+                    id="close-ledger-detail-modal">关闭</button></div>
+        </div>
+    </div>
+
+    <script defer src="assets/js/icon-library.js"></script>
+    <script defer src="assets/js/modules/01-diary.js"></script>
+    <script defer src="assets/js/modules/02-core.js"></script>
+    <script defer src="assets/js/modules/03-event-listeners.js"></script>
+    <script defer src="assets/js/modules/04-chat.js"></script>
+    <script defer src="assets/js/modules/05-ledger.js"></script>
+    <script defer src="assets/js/modules/06-schedule.js"></script>
+    <script defer src="assets/js/modules/07-data-tools.js"></script>
+    <script defer src="assets/js/modules/08-settings.js"></script>
+    <!-- 日记模态框 -->
+    <div id="diary-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="diary-modal-title">日记</span>
+            </div>
+            <div class="modal-body" style="padding: 15px;">
+                <div id="diary-character-selector"
+                    style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <label style="flex-shrink: 0;">角色：</label>
+                    <select id="diary-char-select"
+                        style="flex-grow: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary);"></select>
+                    <button id="edit-diary-prompt-btn"
+                        style="padding: 8px 12px; border-radius: 8px; background: var(--bg-soft); border: none; cursor: pointer;">编辑提示词</button>
+                </div>
+                <div id="diary-content-area">
+                    <div id="diary-empty-state"
+                        style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                        <p>暂无日记</p>
+                        <button id="generate-diary-btn" class="form-button" style="margin-top: 20px;"><svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-diary"></use></svg> 生成日记</button>
+                    </div>
+                    <div id="diary-display" style="display: none;">
+                        <div id="diary-text"
+                            style="background: var(--bg-soft); border-radius: 12px; padding: 20px; white-space: pre-wrap; line-height: 1.8; font-size: 15px; max-height: 400px; overflow-y: auto;">
+                        </div>
+                        <button id="delete-diary-btn" class="form-button"
+                            style="margin-top: 15px; background-color: var(--expense-color);">删除日记</button>
+                    </div>
+                    <div id="diary-loading" style="display: none; text-align: center; padding: 40px;">
+                        <div class="typing-indicator"><span>.</span><span>.</span><span>.</span></div>
+                        <p style="margin-top: 15px; color: var(--text-secondary);">正在生成日记...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="close-diary-modal">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑日记提示词模态框 -->
+    <div id="diary-prompt-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">编辑日记生成提示词</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>系统提示词</label>
+                    <textarea id="diary-system-prompt" rows="10"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary);">请你写一篇{char}的视角中与{user}在{date}的这一天高度相关的日记，主要是你在这一天的对话中，对{user}行为的心理活动经过和情感变化，结合过往对话记录来写。日记写作风格需要按照依照{char}的性格特点。你在写日记时，对{char}统一使用第一人称「我」（如“我收到了她的消息”），对{user}则一般使用第三人称（如“她今天买奶茶花了二十块”），但偶尔插入对{user}第二人称直白的话（如“我想让你知道”），加强情感冲击。直接以“{date}，记录者：{char}”开头，2000字左右~</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">取消</button>
+                <button class="save-btn" id="save-diary-prompt">保存</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

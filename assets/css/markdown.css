@@ -1,0 +1,161 @@
+/* Cava Notebook - markdown.css */
+        .message-bubble .content .markdown-h {
+            margin: 10px 0 5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .message-bubble .content h1.markdown-h {
+            font-size: 1.4em;
+        }
+
+        .message-bubble .content h2.markdown-h {
+            font-size: 1.2em;
+        }
+
+        .message-bubble .content h3.markdown-h {
+            font-size: 1.1em;
+        }
+
+        .message-bubble .content .markdown-hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 12px 0;
+        }
+
+        .message-bubble .content .markdown-code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            background-color: var(--bg-soft);
+            color: var(--accent-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        /* --- Markdown Formatting Styles --- */
+
+        /* === 标题和横线样式 (Headers & HR) === */
+        .message-bubble .content .markdown-h {
+            margin: 10px 0 5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .message-bubble .content h1.markdown-h {
+            font-size: 1.4em;
+        }
+
+        .message-bubble .content h2.markdown-h {
+            font-size: 1.2em;
+        }
+
+        .message-bubble .content h3.markdown-h {
+            font-size: 1.1em;
+        }
+
+        .message-bubble .content .markdown-hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 12px 0;
+        }
+
+        /* === 列表样式 (List) === */
+        .markdown-ul {
+            list-style: none;
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .markdown-ul li {
+            position: relative;
+            margin-bottom: 5px;
+        }
+
+        .markdown-ul li::before {
+            content: '•';
+            position: absolute;
+            left: -15px;
+            top: 0;
+            color: var(--accent-secondary);
+            font-size: 1.2em;
+            line-height: 1;
+        }
+
+        /* === 行内代码样式 (Inline Code) === */
+        .message-bubble .content .markdown-code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            background-color: var(--border-color);
+            color: var(--text-primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        /* === 【核心】代码块样式 (Code Block) === */
+        .markdown-code-block-wrapper {
+            border-radius: 8px;
+            /* 给整个容器加圆角 */
+            overflow: hidden;
+            /* 确保内部元素不会超出圆角 */
+            margin: 10px 0;
+            background-color: var(--text-primary);
+            /* 使用主文字颜色作为背景！ */
+        }
+
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            /* 顶栏的内边距 */
+            background-color: rgba(0, 0, 0, 0.1);
+            /* 在深色背景上加一层淡淡的黑色，增加层次感 */
+        }
+
+        .language-name {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            /* 语言名称用半透明白色 */
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+        }
+
+        .copy-code-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: white;
+            /* 让“已复制”等文字也是白色 */
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .copy-code-btn svg {
+            stroke: rgba(255, 255, 255, 0.7);
+            /* 图标颜色 */
+            transition: stroke 0.2s;
+        }
+
+        .copy-code-btn:hover svg {
+            stroke: white;
+            /* 悬停时图标变亮 */
+        }
+
+        .markdown-code-block-wrapper pre {
+            margin: 0;
+            /* 移除 pre 标签的默认外边距 */
+            padding: 10px;
+            /* 减少内边距，让文字更贴近边框 */
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .markdown-code-block-wrapper pre code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            color: white;
+            /* 代码文字全部为白色 */
+            font-size: 14px;
+            line-height: 1.5;
+        }

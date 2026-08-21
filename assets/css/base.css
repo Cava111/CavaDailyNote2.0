@@ -1,0 +1,337 @@
+/* Cava Notebook - base.css */
+        :root {
+            --bg-main: #FDF0E9;
+            --bg-secondary: #FFFFFF;
+            --bg-soft: #FAE1D5;
+            --accent-primary: #E6C8B4;
+            --accent-secondary: #FFB6A3;
+            --text-primary: #8C7B73;
+            --text-secondary: #B4A29B;
+            --text-primary-rgb: 140, 123, 115;
+            --text-secondary-rgb: 180, 162, 155;
+            --text-light: #FFFFFF;
+            --error-bg: #FADADD;
+            --error-text: #8C2323;
+            --border-color: #F5EBE4;
+            --expense-color: #F28B82;
+            --income-color: #8DD4BF;
+            --shadow-light: rgba(140, 123, 115, 0.1);
+            --shadow-medium: rgba(140, 123, 115, 0.15);
+            /* Schedule colors */
+            --schedule-urgent-important: #FFE5E5;
+            --schedule-urgent-not-important: #FFF5E5;
+            --schedule-not-urgent-important: #E5F0FF;
+            --schedule-not-urgent-not-important: #F0F0F0;
+            --schedule-important-text: #8B4513;
+            /* 红褐色字体 for important tasks */
+        }
+
+        .svg-icon {
+            width: 1em;
+            height: 1em;
+            display: inline-block;
+            vertical-align: -0.125em;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: fill 160ms ease, stroke 160ms ease, transform 160ms ease;
+        }
+
+        .svg-icon-inline {
+            margin-inline: 0.2em;
+        }
+
+        body[data-theme="blue"] {
+            --bg-main: #EAF6FF;
+            --bg-secondary: #FFFFFF;
+            --bg-soft: #D4E9F7;
+            --accent-primary: #B0D4EC;
+            --accent-secondary: #87C4F4;
+            --text-primary: #5A7C94;
+            --text-secondary: #9AB7CC;
+            --text-primary-rgb: 90, 124, 148;
+            --text-secondary-rgb: 154, 183, 204;
+            --border-color: #E0F0FF;
+            --shadow-light: rgba(90, 124, 148, 0.1);
+            --shadow-medium: rgba(90, 124, 148, 0.15);
+            --schedule-important-text: #0056b3;
+        }
+
+        body[data-theme="green"] {
+            --bg-main: #EFF8F2;
+            --bg-secondary: #FFFFFF;
+            --bg-soft: #DCEEE2;
+            --accent-primary: #B9DCD0;
+            --accent-secondary: #96CDBC;
+            --text-primary: #5E8071;
+            --text-secondary: #9EBAAF;
+            --text-primary-rgb: 94, 128, 113;
+            --text-secondary-rgb: 158, 186, 175;
+            --border-color: #E5F1E9;
+            --shadow-light: rgba(94, 128, 113, 0.1);
+            --shadow-medium: rgba(94, 128, 113, 0.15);
+            --schedule-important-text: #285c3f;
+        }
+
+        body[data-theme="purple"] {
+            --bg-main: #F6F2FF;
+            --bg-secondary: #FFFFFF;
+            --bg-soft: #EAE0F7;
+            --accent-primary: #D4C2E8;
+            --accent-secondary: #C0A9E0;
+            --text-primary: #7C6B8F;
+            --text-secondary: #A99CB8;
+            --text-primary-rgb: 124, 107, 143;
+            --text-secondary-rgb: 169, 156, 184;
+            --border-color: #F0EBFA;
+            --shadow-light: rgba(124, 107, 143, 0.1);
+            --shadow-medium: rgba(124, 107, 143, 0.15);
+            --schedule-important-text: #563d7c;
+        }
+
+        body[data-theme="pink"] {
+            --bg-main: #FFF0F5;
+            --bg-secondary: #FFFFFF;
+            --bg-soft: #FFE2EC;
+            --accent-primary: #F8C4D8;
+            --accent-secondary: #F4AAB6;
+            --text-primary: #9A6A74;
+            --text-secondary: #C7A5AD;
+            --text-primary-rgb: 154, 106, 116;
+            --text-secondary-rgb: 199, 165, 173;
+            --border-color: #FAEBF0;
+            --shadow-light: rgba(154, 106, 116, 0.1);
+            --shadow-medium: rgba(154, 106, 116, 0.15);
+            --schedule-important-text: #8c1c44;
+        }
+
+        body[data-theme="gray"] {
+            --bg-main: #F5F5F5;
+            --bg-secondary: #FFFFFF;
+            --bg-soft: #EAEAEA;
+            --accent-primary: #D1D1D1;
+            --accent-secondary: #B0B0B0;
+            --text-primary: #616161;
+            --text-secondary: #9E9E9E;
+            --text-primary-rgb: 97, 97, 97;
+            --text-secondary-rgb: 158, 158, 158;
+            --border-color: #EEEEEE;
+            --shadow-light: rgba(97, 97, 97, 0.1);
+            --shadow-medium: rgba(97, 97, 97, 0.15);
+            --schedule-important-text: #333;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            max-width: 430px;
+            margin: 0 auto;
+            background-color: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 30px var(--shadow-medium);
+            transition: background-color 0.3s ease;
+            overflow: hidden;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-main);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease;
+        }
+
+        .page.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            flex-shrink: 0;
+            padding: 12px 16px;
+            padding-top: calc(12px + env(safe-area-inset-top));
+            background-color: rgba(253, 240, 233, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 600;
+            z-index: 10;
+            transition: background-color 0.3s ease, border-bottom-color 0.3s ease;
+        }
+
+        body[data-theme="blue"] .header {
+            background-color: rgba(234, 246, 255, 0.8);
+        }
+
+        body[data-theme="green"] .header {
+            background-color: rgba(239, 248, 242, 0.8);
+        }
+
+        body[data-theme="purple"] .header {
+            background-color: rgba(246, 242, 255, 0.8);
+        }
+
+        body[data-theme="pink"] .header {
+            background-color: rgba(255, 240, 245, 0.8);
+        }
+
+        body[data-theme="gray"] .header {
+            background-color: rgba(245, 245, 245, 0.8);
+        }
+
+        .header .action-btn {
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .header .action-btn:active {
+            background-color: var(--accent-secondary);
+            color: var(--bg-secondary);
+            transform: scale(0.92);
+        }
+
+        .header .back-btn {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .header .left-action {
+            flex: 1 1 0;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .header .right-action {
+            flex: 1 1 0;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .header .center-title {
+            flex: 2 1 0;
+            text-align: center;
+        }
+
+        /* Bottom Navigation */
+        #bottom-nav {
+            flex-shrink: 0;
+            display: flex;
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-top: 1px solid var(--border-color);
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 100;
+            transition: background-color 0.3s ease, border-top-color 0.3s ease;
+        }
+
+        body[data-theme="blue"] #bottom-nav,
+        body[data-theme="green"] #bottom-nav,
+        body[data-theme="purple"] #bottom-nav,
+        body[data-theme="pink"] #bottom-nav,
+        body[data-theme="gray"] #bottom-nav {
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .nav-item {
+            flex: 1;
+            padding: 8px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s ease;
+        }
+
+        .nav-item .icon {
+            width: 32px;
+            height: 32px;
+            font-size: 24px;
+            line-height: 1;
+            margin-bottom: 3px;
+            display: grid;
+            place-items: center;
+            transition: color 180ms ease, transform 180ms ease;
+        }
+
+        .nav-item .icon .svg-icon {
+            display: block;
+            vertical-align: 0;
+            transform-origin: center;
+        }
+
+        .nav-item .icon .nav-icon-filled {
+            display: none;
+        }
+
+        .nav-item .label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .nav-item.active {
+            color: var(--accent-secondary);
+        }
+
+        .nav-item.active .icon {
+            color: var(--accent-secondary);
+        }
+
+        .nav-item.active .icon .nav-icon-outline {
+            display: none;
+        }
+
+        .nav-item.active .icon .nav-icon-filled {
+            display: block;
+        }
+
+        .nav-item:active .icon {
+            transform: scale(0.9);
+        }
+
+        /* --- Chat Page Styles --- */

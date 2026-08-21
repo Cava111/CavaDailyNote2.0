@@ -1,0 +1,468 @@
+/* Cava Notebook - ledger.css */
+        .message-bubble.transaction .content,
+        .message-bubble.schedule .content,
+        .message-bubble.ledger_summary .content,
+        .message-bubble.schedule_summary .content,
+        .message-bubble.pie_chart_summary .content {
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .transaction-card,
+        .schedule-card,
+        .summary-card {
+            width: 220px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px var(--shadow-medium);
+            background: var(--bg-secondary);
+        }
+
+        .transaction-header,
+        .schedule-header,
+        .summary-header {
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-light);
+        }
+
+        .transaction-header.expense {
+            background-color: var(--expense-color);
+        }
+
+        .transaction-header.income {
+            background-color: var(--income-color);
+        }
+
+        .schedule-header {
+            background-color: var(--accent-secondary);
+        }
+
+        .summary-header {
+            background-color: var(--accent-primary);
+        }
+
+        .transaction-header .icon,
+        .schedule-header .icon,
+        .summary-header .icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .transaction-header .icon .svg-icon,
+        .schedule-header .icon .svg-icon,
+        .summary-header .icon .svg-icon {
+            display: block;
+        }
+
+        .transaction-header .category-name,
+        .schedule-header .type-name,
+        .summary-header .type-name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .transaction-body,
+        .schedule-body,
+        .summary-body {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .transaction-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .transaction-amount .currency-label {
+            font-size: 0.5em;
+        }
+
+        .transaction-remark {
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 8px;
+            word-break: break-all;
+            position: relative;
+        }
+
+        .schedule-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .schedule-importance,
+        .schedule-deadline,
+        .schedule-status {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .schedule-status.completed {
+            color: var(--income-color);
+            font-weight: 500;
+        }
+
+        .schedule-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 8px;
+            word-break: break-all;
+        }
+
+        .summary-body .text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Inline Edit Styles */
+        .inline-edit-container {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            padding: 10px 14px;
+            box-sizing: border-box;
+        }
+
+        .message-bubble.editing .content-text,
+        .message-bubble.editing .transaction-remark .original-text,
+        .message-bubble.editing .schedule-description .original-text {
+            display: none;
+        }
+
+        .message-bubble.editing .transaction-remark::before,
+        .message-bubble.editing .schedule-description::before {
+            display: none;
+        }
+
+        .message-bubble.editing .inline-edit-container {
+            display: flex;
+        }
+
+        .message-bubble.editing.text .content {
+            padding: 0;
+        }
+
+        .message-bubble.editing.transaction .transaction-remark,
+        .message-bubble.editing.schedule .schedule-description {
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .transaction-card .inline-edit-container,
+        .schedule-card .inline-edit-container {
+            padding: 8px 0 0 0;
+        }
+
+        .inline-edit-textarea {
+            width: 100%;
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            font-size: 16px;
+            padding: 10px 14px;
+            box-sizing: border-box;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            resize: none;
+            min-height: 40px;
+            font-family: inherit;
+            line-height: 1.5;
+            overflow-y: hidden;
+        }
+
+        .transaction-card .inline-edit-textarea,
+        .schedule-card .inline-edit-textarea {
+            font-size: 14px;
+            padding: 8px;
+            line-height: 1.4;
+        }
+
+        .inline-edit-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .inline-edit-actions button {
+            border: none;
+            background-color: var(--bg-soft);
+            color: var(--text-primary);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .inline-edit-actions button:active {
+            transform: scale(0.9);
+        }
+
+        .inline-edit-actions .save {
+            background-color: var(--income-color);
+            color: white;
+        }
+
+        .inline-edit-actions .cancel {
+            background-color: var(--expense-color);
+            color: white;
+        }
+
+        /* Transaction Input Panel */
+        #transaction-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--bg-main);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 0 -5px 20px var(--shadow-medium);
+            z-index: 200;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+            visibility: hidden;
+        }
+
+        #transaction-panel.visible {
+            transform: translateY(0);
+            visibility: visible;
+        }
+
+        .panel-header {
+            padding: 8px 15px;
+            text-align: center;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .panel-header .close-btn {
+            position: absolute;
+            left: 15px;
+            top: 8px;
+            font-size: 18px;
+            line-height: 1;
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+        }
+
+        .panel-header .close-btn:active {
+            background-color: var(--accent-secondary);
+            color: var(--bg-secondary);
+            transform: scale(0.9);
+        }
+
+        .type-selector {
+            display: flex;
+            padding: 0 15px;
+            margin-bottom: 15px;
+        }
+
+        .type-selector button {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .type-selector button.active {
+            color: var(--text-primary);
+            font-weight: bold;
+        }
+
+        .type-selector button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background-color: var(--accent-secondary);
+            border-radius: 2px;
+        }
+
+        #category-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            padding: 0 15px 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .category-item.selected {
+            background-color: var(--accent-secondary);
+            color: var(--bg-secondary);
+            box-shadow: 0 3px 8px var(--shadow-light);
+            transform: translateY(-1px);
+        }
+
+        .category-item .icon {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .category-item .icon .svg-icon {
+            display: block;
+        }
+
+        .category-item .name {
+            font-size: 12px;
+        }
+
+        /* New Transaction Remark Section Styles */
+        .transaction-remark-section {
+            padding: 10px 15px;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        #transaction-remark-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        #transaction-remark-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        #transaction-remark-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        #numpad-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            background-color: var(--bg-secondary);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .numpad button {
+            padding: 20px 0;
+            font-size: 24px;
+            border: none;
+            background: transparent;
+            border-top: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .numpad button:active {
+            background-color: var(--bg-soft);
+        }
+
+        .numpad .zero {
+            grid-column: 1 / 3;
+        }
+
+        .numpad-actions {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .numpad-actions button {
+            flex: 1;
+            font-size: 22px;
+            border: none;
+            background: transparent;
+            border-top: 1px solid var(--border-color);
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .numpad-actions button:active {
+            background-color: var(--accent-secondary);
+            color: var(--bg-secondary);
+        }
+
+        .numpad-actions .confirm {
+            background-color: var(--accent-secondary);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .numpad-actions .delete-transaction {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        #amount-display-container {
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-secondary);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+
+        #currency-selector {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        #amount-display {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: right;
+            flex-grow: 1;
+        }
+
+        /* Schedule Input Panel */
