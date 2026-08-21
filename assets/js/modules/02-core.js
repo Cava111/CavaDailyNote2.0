@@ -13,6 +13,21 @@
                 diaries: '++id, date, charId, content, timestamp'
             });
 
+            // v11 adds summary memories without changing or migrating existing records.
+            db.version(11).stores({
+                appConfig: 'id',
+                transactions: '++id, timestamp, type, category, amount, currency, remark',
+                messages: '++id, timestamp, role, content, type, senderId, relatedId',
+                apiProxies: '++id, name, url, apiKey, models',
+                aiCharacters: '++id, name, prompt, avatar, proxyId, model, backupProxyId, backupModel',
+                currencies: 'code, name, rate',
+                transactionTemplates: '++id, name, type, category, amount, currency, remark',
+                schedules: '++id, timestamp, title, description, importance, deadline, eventType, completed, recurrence, endDate, completedDates',
+                emojiPacks: '++id, name, image, timestamp',
+                diaries: '++id, date, charId, content, timestamp',
+                memories: '++id, startTime, endTime, sourceType, sourceStartId, sourceEndId, recallMode, sortOrder, createdAt'
+            });
+
             const DEFAULT_SYSTEM_PROMPTS = {
                 sendTime: true,
                 sendModel: true,
@@ -22,11 +37,25 @@
                 pie: '这是我账本图表数据，请你帮我分析一下：{data}'
             };
 
+            const DEFAULT_MEMORY_SETTINGS = {
+                mode: 'messages',
+                messageInterval: 50,
+                dateIntervalDays: 3,
+                autoEnabled: false,
+                summarizerType: 'character',
+                characterId: null,
+                proxyId: null,
+                model: '',
+                tokenLimit: 2000,
+                messageCursorId: null,
+                dateCursor: null
+            };
+
             const defaultLedgerDate = new Date();
             const DEFAULT_LEDGER_MONTH = `${defaultLedgerDate.getFullYear()}-${String(defaultLedgerDate.getMonth() + 1).padStart(2, '0')}`;
 
             let state = {
-                config: {}, proxies: [], characters: [], messages: [], transactions: [], currencies: [], schedules: [], emojiPacks: [], diaries: [],
+                config: {}, proxies: [], characters: [], messages: [], transactions: [], currencies: [], schedules: [], emojiPacks: [], diaries: [], memories: [],
                 currentTransaction: { type: 'expense', category: null, amountStr: '0', currency: 'RMB' },
                 currentSchedule: {},
                 calendarState: { year: new Date().getFullYear(), month: new Date().getMonth(), selectedDate: null, mode: 'deadline' },
@@ -82,11 +111,12 @@
                 renderChatCharacterBar();
                 updateSendButtonState();
                 populateLedgerCurrencyFilter();
+                initializeMemoryFeature();
             }
 
 
             async function loadDataFromDB() {
-                const [config, proxies, characters, messages, transactions, currencies, schedules, emojiPacks, diaries] = await Promise.all([
+                const [config, proxies, characters, messages, transactions, currencies, schedules, emojiPacks, diaries, memories] = await Promise.all([
                     db.appConfig.get('main'),
                     db.apiProxies.toArray(),
                     db.aiCharacters.toArray(),
@@ -95,7 +125,8 @@
                     db.currencies.toArray(),
                     db.schedules.toArray(),
                     db.emojiPacks.toArray(),
-                    db.diaries.toArray()
+                    db.diaries.toArray(),
+                    db.memories.orderBy('sortOrder').toArray()
                 ]);
 
                 const defaultDiaryPrompt = `请你写一篇{char}的视角中与{user}在{date}的这一天高度相关的日记，主要是你在这一天的对话中，对{user}行为的心理活动经过和情感变化，结合过往对话记录来写。日记写作风格需要按照依照{char}的性格特点。你在写日记时，对{char}统一使用第一人称「我」（如“我收到了她的消息”），对{user}则一般使用第三人称（如“她今天买奶茶花了二十块”），但偶尔插入对{user}第二人称直白的话（如“我想让你知道”），加强情感冲击。直接以“{date}，记录者：{char}”开头，2000字左右~`;
@@ -112,10 +143,18 @@
                     userBio: '',
                     skipRegenerateConfirm: false,
                     systemPromptSettings: DEFAULT_SYSTEM_PROMPTS,
-                    diaryPrompt: defaultDiaryPrompt // <--- 新增这一行
+                    diaryPrompt: defaultDiaryPrompt,
+                    diaryLookbackDays: 3,
+                    diaryLookaheadDays: 1,
+                    diaryContextMaxTokens: 8000
                 };
 
-                state.config = { ...baseConfig, ...config, systemPromptSettings: { ...DEFAULT_SYSTEM_PROMPTS, ...(config ? config.systemPromptSettings : {}) } };
+                state.config = {
+                    ...baseConfig,
+                    ...config,
+                    systemPromptSettings: { ...DEFAULT_SYSTEM_PROMPTS, ...(config ? config.systemPromptSettings : {}) },
+                    memorySettings: { ...DEFAULT_MEMORY_SETTINGS, ...(config ? config.memorySettings : {}) }
+                };
 
                 // 从数据库加载日记提示词，如果不存在则使用默认值
                 currentDiaryPrompt = state.config.diaryPrompt || defaultDiaryPrompt;
@@ -138,6 +177,7 @@
                 state.schedules = schedules || [];
                 state.emojiPacks = emojiPacks || [];
                 state.diaries = diaries || [];
+                state.memories = (memories || []).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
                 if (currencies.length === 0) {
                     const preset = { code: 'HKD', name: '港币', rate: 0.92 };
@@ -174,6 +214,7 @@
                 ELS.navItems.forEach(item => item.classList.toggle('active', item.dataset.page === pageId));
                 if (pageId === 'ledger-screen') renderLedger();
                 if (pageId === 'schedule-screen') renderSchedules();
+                if (pageId === 'memory-screen' && typeof renderMemoryPage === 'function') renderMemoryPage(true);
             }
 
             // 这个函数用来展开和收起“高级设置”

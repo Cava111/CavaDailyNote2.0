@@ -1,5 +1,28 @@
 /* Cava Notebook - 01-diary.js */
 
+            function clampDiaryDaySetting(value, fallback) {
+                const parsed = Number(value);
+                if (!Number.isFinite(parsed)) return fallback;
+                return Math.min(30, Math.max(0, Math.trunc(parsed)));
+            }
+
+            function loadDiaryGenerationSettingsIntoUI() {
+                document.getElementById('diary-system-prompt').value = state.config.diaryPrompt || '';
+                document.getElementById('diary-lookback-days').value = clampDiaryDaySetting(state.config.diaryLookbackDays, 3);
+                document.getElementById('diary-lookahead-days').value = clampDiaryDaySetting(state.config.diaryLookaheadDays, 1);
+                document.getElementById('diary-context-max-tokens').value = Math.max(100, Number(state.config.diaryContextMaxTokens) || 8000);
+            }
+
+            async function saveDiaryGenerationSettingsFromUI() {
+                const diaryPrompt = document.getElementById('diary-system-prompt').value;
+                const diaryLookbackDays = clampDiaryDaySetting(document.getElementById('diary-lookback-days').value, 3);
+                const diaryLookaheadDays = clampDiaryDaySetting(document.getElementById('diary-lookahead-days').value, 1);
+                const diaryContextMaxTokens = Math.max(100, Math.trunc(Number(document.getElementById('diary-context-max-tokens').value) || 8000));
+                Object.assign(state.config, { diaryPrompt, diaryLookbackDays, diaryLookaheadDays, diaryContextMaxTokens });
+                currentDiaryPrompt = diaryPrompt;
+                await db.appConfig.put(state.config);
+            }
+
             async function generateDiary() {
                 if (!state.currentDiaryCharId || !state.currentDiaryDate) {
                     alert('请先选择角色');
@@ -58,7 +81,20 @@
                         .replace(/{user}/g, userId)
                         .replace(/{date}/g, dateStr);
 
-                    const history = buildContext(8000).context;
+                    const lookbackDays = clampDiaryDaySetting(state.config.diaryLookbackDays, 3);
+                    const lookaheadDays = clampDiaryDaySetting(state.config.diaryLookaheadDays, 1);
+                    const diaryContextMaxTokens = Math.max(100, Number(state.config.diaryContextMaxTokens) || 8000);
+                    const diaryContext = buildDiaryContext(
+                        state.currentDiaryDate,
+                        lookbackDays,
+                        lookaheadDays,
+                        diaryContextMaxTokens
+                    );
+                    const memoryContext = buildMemoryContext({ maxEndTime: diaryContext.endTime });
+                    const history = [
+                        ...memoryContext.context,
+                        ...diaryContext.context
+                    ];
 
 
                     const params = character.aiParams || {
@@ -93,7 +129,7 @@
 
                     if (!response.ok) {
                         const errorText = await response.text();
-                        throw new Error(await response.text());
+                        throw new Error(errorText);
                     }
 
                     const data = await response.json();

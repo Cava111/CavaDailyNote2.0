@@ -351,6 +351,55 @@
             word-break: break-all;
         }
 
+        .diary-context-settings {
+            padding-top: 4px;
+        }
+
+        .diary-context-range-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .diary-context-range-grid > label,
+        .diary-token-setting {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 9px;
+            background: var(--bg-soft);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .diary-context-settings .diary-context-range-grid input {
+            width: 58px;
+            padding: 7px;
+            border: 1px solid var(--accent-primary);
+            border-radius: 7px;
+            box-sizing: border-box;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .diary-token-setting {
+            margin-top: 10px;
+        }
+
+        .diary-context-settings .diary-token-setting input {
+            width: 120px;
+        }
+
+        .diary-context-settings p {
+            margin: 8px 0 0;
+            color: var(--text-secondary);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
         .proxy-list-title-row {
             display: flex;
             align-items: center;

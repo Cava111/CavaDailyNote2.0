@@ -496,16 +496,13 @@
                 });
 
                 document.getElementById('edit-diary-prompt-btn').addEventListener('click', () => {
-                    document.getElementById('diary-system-prompt').value = currentDiaryPrompt;
+                    loadDiaryGenerationSettingsIntoUI();
                     document.getElementById('diary-prompt-modal').classList.add('visible');
                 });
 
                 document.getElementById('save-diary-prompt').addEventListener('click', async () => {
-                    const newPrompt = document.getElementById('diary-system-prompt').value;
-                    // 直接调用 updateConfig 函数，它会同时更新 state 和数据库
-                    await updateConfig('diaryPrompt', newPrompt);
-                    console.log('提示词已更新并存入数据库:', state.config.diaryPrompt);
-                    alert('提示词已成功保存！');
+                    await saveDiaryGenerationSettingsFromUI();
+                    alert('日记提示词与上下文设置已保存！');
                     document.getElementById('diary-prompt-modal').classList.remove('visible');
                 });
 

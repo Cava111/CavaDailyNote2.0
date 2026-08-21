@@ -82,7 +82,9 @@
                     aiCharacters: await db.aiCharacters.toArray(),
                     currencies: await db.currencies.toArray(),
                     schedules: await db.schedules.toArray(),
-                    emojiPacks: await db.emojiPacks.toArray()
+                    emojiPacks: await db.emojiPacks.toArray(),
+                    diaries: await db.diaries.toArray(),
+                    memories: await db.memories.toArray()
                 };
                 download('Cava-Backup.json', JSON.stringify(dataToExport, null, 2), 'application/json');
             }
@@ -104,6 +106,8 @@
                         if (data.currencies) await db.currencies.bulkPut(data.currencies);
                         if (data.schedules) await db.schedules.bulkPut(data.schedules);
                         if (data.emojiPacks) await db.emojiPacks.bulkPut(data.emojiPacks);
+                        if (data.diaries) await db.diaries.bulkPut(data.diaries);
+                        if (data.memories) await db.memories.bulkPut(data.memories);
                         alert('导入成功！页面将刷新。');
                         location.reload();
                     } catch (err) { alert(`导入失败: ${err.message}`); }
@@ -206,5 +210,5 @@
                 URL.revokeObjectURL(url);
             }
             function toggleSidebar() { ELS.sidebar.classList.toggle('visible'); ELS.sidebarOverlay.classList.toggle('visible'); }
-            async function toggleContextPreview() { if (ELS.sidebarPreviewContent.style.display === 'block') { ELS.sidebarPreviewContent.style.display = 'none'; return; } const { context, tokens } = buildContext(state.config.maxTokens); ELS.sidebarTokenCount.textContent = tokens; ELS.sidebarPreviewContent.textContent = JSON.stringify(context, null, 2); ELS.sidebarPreviewContent.style.display = 'block'; }
+            async function toggleContextPreview() { if (ELS.sidebarPreviewContent.style.display === 'block') { ELS.sidebarPreviewContent.style.display = 'none'; return; } const recent = buildContext(state.config.maxTokens); const memory = buildMemoryContext(); ELS.sidebarTokenCount.textContent = recent.tokens + memory.tokens; ELS.sidebarPreviewContent.textContent = JSON.stringify([...memory.context, ...recent.context], null, 2); ELS.sidebarPreviewContent.style.display = 'block'; }
 

@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="assets/css/settings.css">
     <link rel="stylesheet" href="assets/css/modals.css">
     <link rel="stylesheet" href="assets/css/markdown.css">
+    <link rel="stylesheet" href="assets/css/memory.css">
 </head>
 
 <body data-theme="default">
@@ -37,6 +38,8 @@
         <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19h16M8 7h8M8 11h8"/></symbol>
         <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
         <symbol id="icon-calendar-check" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18m5 5-4 4-2-2"/></symbol>
+        <symbol id="icon-memory" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="M2 8h2M2 12h2M2 16h2"/></symbol>
+        <symbol id="icon-memory-filled" viewBox="0 0 24 24"><path d="M7 3h10a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" fill="currentColor" stroke="none"/><path d="M8 8h8M8 12h8M8 16h5" fill="none" stroke="var(--bg-secondary)" stroke-width="1.7" stroke-linecap="round"/><path d="M2 8h2M2 12h2M2 16h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
         <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.52a2 2 0 0 1-1 1.73l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.73v-.52a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></symbol>
         <symbol id="icon-message-filled" viewBox="0 0 24 24"><path d="M20.5 11.7c0 4.4-3.8 7.8-8.5 7.8-1.3 0-2.6-.3-3.7-.8L4 20.5l1.2-4.1A7.4 7.4 0 0 1 3.5 12c0-4.4 3.8-7.8 8.5-7.8s8.5 3.2 8.5 7.5Z" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="var(--bg-secondary)" stroke="none"/><circle cx="15" cy="12" r="1" fill="var(--bg-secondary)" stroke="none"/></symbol>
         <symbol id="icon-book-filled" viewBox="0 0 24 24"><path d="M6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22.5v-17A2.5 2.5 0 0 1 6.5 3Z" fill="currentColor" stroke="none"/><path d="M4 19.3h16M8 7.5h8M8 11.5h7" fill="none" stroke="var(--bg-secondary)" stroke-width="1.6" stroke-linecap="round"/></symbol>
@@ -255,7 +258,90 @@
                 <div id="schedule-count" class="schedule-count">已完成0项事件 <svg class="svg-icon svg-icon-inline" aria-hidden="true"><use href="assets/icons.svg#icon-star"></use></svg></div>
             </div>
 
-            <!-- Page 4: More/Settings -->
+            <!-- Page 4: Memory -->
+            <div id="memory-screen" class="page">
+                <div class="header">
+                    <div class="left-action"></div>
+                    <div class="center-title"><span>摘要记忆</span></div>
+                    <div class="right-action"><span class="memory-header-count" id="memory-header-count">0 条</span></div>
+                </div>
+                <div class="page-content memory-page-content">
+                    <section class="memory-section">
+                        <h3>总结设置</h3>
+                        <div class="memory-subheading">总结时机</div>
+                        <div class="memory-mode-picker" role="radiogroup" aria-label="总结方式">
+                            <label><input type="radio" name="memory-summary-mode" value="messages"> 按消息数</label>
+                            <label><input type="radio" name="memory-summary-mode" value="date"> 按日期</label>
+                        </div>
+                        <div id="memory-message-interval-row" class="memory-field-row">
+                            <label for="memory-message-interval">每</label>
+                            <input type="number" id="memory-message-interval" min="1" step="1">
+                            <span>条消息总结一次</span>
+                        </div>
+                        <div id="memory-date-interval-row" class="memory-field-row">
+                            <label for="memory-date-interval">每</label>
+                            <input type="number" id="memory-date-interval" min="1" step="1">
+                            <span>天总结一次</span>
+                        </div>
+
+                        <div class="memory-subheading">总结执行者</div>
+                        <div class="memory-mode-picker" role="radiogroup" aria-label="总结执行者">
+                            <label><input type="radio" name="memory-summarizer-type" value="character"> 角色总结</label>
+                            <label><input type="radio" name="memory-summarizer-type" value="api"> API 模型</label>
+                        </div>
+                        <div id="memory-character-summarizer-row" class="memory-summarizer-row">
+                            <label class="memory-form-field"><span>选择 AI 角色</span><select id="memory-character-select"></select></label>
+                            <p>使用该角色绑定的主代理、模型和参数。</p>
+                        </div>
+                        <div id="memory-api-summarizer-row" class="memory-form-grid" hidden>
+                            <label class="memory-form-field"><span>代理供应商</span><select id="memory-proxy-select"></select></label>
+                            <label class="memory-form-field"><span>轻量总结模型</span><select id="memory-model-select"></select></label>
+                        </div>
+                        <label class="memory-form-field memory-token-field"><span>Memory Token 上限</span><input type="number" id="memory-token-limit" min="100" step="100"></label>
+                        <p class="memory-core-note">永久人设与绝不能遗忘的信息请写入角色 Prompt；Memory 只压缩较早聊天。</p>
+                        <label class="memory-auto-toggle"><input type="checkbox" id="memory-auto-enabled"> 自动总结</label>
+                        <button type="button" class="form-button" id="memory-save-settings-btn">保存 Memory 设置</button>
+                    </section>
+
+                    <section class="memory-section">
+                        <h3>总结进度</h3>
+                        <div class="memory-progress-card" id="memory-message-progress"></div>
+                        <div class="memory-progress-card" id="memory-date-progress"></div>
+                    </section>
+
+                    <section class="memory-section">
+                        <h3>手动总结</h3>
+                        <div id="memory-source-overview" class="memory-source-overview"></div>
+                        <div class="memory-mode-picker compact" role="radiogroup" aria-label="手动总结范围类型">
+                            <label><input type="radio" name="memory-manual-source" value="messages" checked> 消息范围</label>
+                            <label><input type="radio" name="memory-manual-source" value="date"> 日期范围</label>
+                        </div>
+                        <div id="memory-manual-message-range" class="memory-range-row">
+                            <label>第 <input type="number" id="memory-manual-message-start" min="1"> 条</label>
+                            <span>～</span>
+                            <label>第 <input type="number" id="memory-manual-message-end" min="1"> 条</label>
+                        </div>
+                        <div id="memory-manual-date-range" class="memory-range-row" hidden>
+                            <input type="date" id="memory-manual-date-start">
+                            <span>～</span>
+                            <input type="date" id="memory-manual-date-end">
+                        </div>
+                        <button type="button" class="form-button" id="memory-manual-summarize-btn">生成 Memory</button>
+                        <div id="memory-operation-status" class="memory-operation-status" role="status" aria-live="polite"></div>
+                    </section>
+
+                    <section class="memory-section memory-list-section">
+                        <div class="memory-section-heading">
+                            <h3>Memory 条目</h3>
+                            <span id="memory-count-label">0 条</span>
+                        </div>
+                        <p class="memory-list-hint">长按左侧拖拽柄调整顺序。越靠后的条目保留优先级越高；Token 不足时从最前方开始裁剪。</p>
+                        <div id="memory-list"></div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Page 5: More/Settings -->
             <div id="more-screen" class="page">
                 <div class="header">
                     <div class="left-action"></div>
@@ -456,6 +542,10 @@
             <div class="nav-item" data-page="schedule-screen">
                 <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-calendar"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-calendar-filled"></use></svg></div>
                 <div class="label">日程</div>
+            </div>
+            <div class="nav-item" data-page="memory-screen">
+                <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-memory"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-memory-filled"></use></svg></div>
+                <div class="label">记忆</div>
             </div>
             <div class="nav-item" data-page="more-screen">
                 <div class="icon"><svg class="svg-icon nav-icon-outline" aria-hidden="true"><use href="assets/icons.svg#icon-settings"></use></svg><svg class="svg-icon nav-icon-filled" aria-hidden="true"><use href="assets/icons.svg#icon-settings-filled"></use></svg></div>
@@ -786,6 +876,7 @@
     <script defer src="assets/js/modules/05-ledger.js"></script>
     <script defer src="assets/js/modules/06-schedule.js"></script>
     <script defer src="assets/js/modules/07-data-tools.js"></script>
+    <script defer src="assets/js/modules/09-memory.js"></script>
     <script defer src="assets/js/modules/08-settings.js"></script>
     <!-- 日记模态框 -->
     <div id="diary-modal" class="modal-overlay">
@@ -800,7 +891,7 @@
                     <select id="diary-char-select"
                         style="flex-grow: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary);"></select>
                     <button id="edit-diary-prompt-btn"
-                        style="padding: 8px 12px; border-radius: 8px; background: var(--bg-soft); border: none; cursor: pointer;">编辑提示词</button>
+                        style="padding: 8px 12px; border-radius: 8px; background: var(--bg-soft); border: none; cursor: pointer;">日记设置</button>
                 </div>
                 <div id="diary-content-area">
                     <div id="diary-empty-state"
@@ -830,12 +921,21 @@
     <!-- 编辑日记提示词模态框 -->
     <div id="diary-prompt-modal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header">编辑日记生成提示词</div>
+            <div class="modal-header">日记生成设置</div>
             <div class="modal-body">
                 <div class="form-group">
                     <label>系统提示词</label>
                     <textarea id="diary-system-prompt" rows="10"
                         style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary);">请你写一篇{char}的视角中与{user}在{date}的这一天高度相关的日记，主要是你在这一天的对话中，对{user}行为的心理活动经过和情感变化，结合过往对话记录来写。日记写作风格需要按照依照{char}的性格特点。你在写日记时，对{char}统一使用第一人称「我」（如“我收到了她的消息”），对{user}则一般使用第三人称（如“她今天买奶茶花了二十块”），但偶尔插入对{user}第二人称直白的话（如“我想让你知道”），加强情感冲击。直接以“{date}，记录者：{char}”开头，2000字左右~</textarea>
+                </div>
+                <div class="form-group diary-context-settings">
+                    <label>日记上下文范围</label>
+                    <div class="diary-context-range-grid">
+                        <label><span>向前读取</span><span><input type="number" id="diary-lookback-days" min="0" max="30" step="1"> 天</span></label>
+                        <label><span>向后读取</span><span><input type="number" id="diary-lookahead-days" min="0" max="30" step="1"> 天</span></label>
+                    </div>
+                    <label class="diary-token-setting"><span>日记上下文 Token 上限</span><input type="number" id="diary-context-max-tokens" min="100" step="100"></label>
+                    <p>0 / 0 表示只读取目标日期当天。日期边界按本地时间计算；Memory 使用自己的独立 Token 上限。</p>
                 </div>
             </div>
             <div class="modal-footer">

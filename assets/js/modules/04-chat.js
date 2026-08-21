@@ -146,7 +146,10 @@
                 systemInfo += `\n---\n\n`;
 
                 const systemPrefix = userProfileString + systemInfo;
-                const systemPrompt = systemPrefix + `${character.prompt}\n\n你的任务是作为聊天伙伴对用户的记账和聊天内容做出回应。你的回应需要符合你的人设。如果用户发了图片或表情包，你要像能看到一样进行评论。你也可以发送表情包，格式为[emoji:表情包名称]，当你发送表情包时，需要单独换行。可用的表情包有：${state.emojiPacks.map(e => e.name).join('、')}。请自然地进行对话。规则如下：\n1. 发送多条消息请用换行符(\\n)分隔，这会创建多个聊天气泡。\n2. 在单条消息内部换行，请直接使用 <br> 标签。`; const history = buildContext(state.config.maxTokens || 4096).context;
+                const systemPrompt = systemPrefix + `${character.prompt}\n\n你的任务是作为聊天伙伴对用户的记账和聊天内容做出回应。你的回应需要符合你的人设。如果用户发了图片或表情包，你要像能看到一样进行评论。你也可以发送表情包，格式为[emoji:表情包名称]，当你发送表情包时，需要单独换行。可用的表情包有：${state.emojiPacks.map(e => e.name).join('、')}。请自然地进行对话。规则如下：\n1. 发送多条消息请用换行符(\\n)分隔，这会创建多个聊天气泡。\n2. 在单条消息内部换行，请直接使用 <br> 标签。`;
+                const memoryHistory = buildMemoryContext().context;
+                const recentHistory = buildContext(state.config.maxTokens || 4096).context;
+                const history = [...memoryHistory, ...recentHistory];
 
                 // 1. 为主API的调用创建一个“思考中”气泡
                 const thinkingBubbleId = addThinkingBubble(character);
@@ -274,113 +277,178 @@
                 renderChatMessages();
             }
 
+            function getContextLocalDateKey(timestamp) {
+                const date = new Date(timestamp);
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            }
+
+            function createContextDateMarker(dateKey) {
+                const [, month, day] = dateKey.split('-').map(Number);
+                const content = `\n——以下是${month}月${day}日的消息——\n`;
+                return { message: { role: 'system', content }, tokens: content.length * 2 };
+            }
+
+            function formatMessageForContext(msg, options = {}) {
+                const { messageOffset = Number.POSITIVE_INFINITY } = options;
+                const { systemPromptSettings } = state.config;
+                let content;
+                let tokens = 0;
+
+                if (msg.type === 'transaction') {
+                    const transaction = state.transactions.find(item => item.id === msg.relatedId);
+                    if (!transaction) return null;
+                    const category = CATEGORIES[transaction.type].find(item => item.id === transaction.category)?.name || '未知';
+                    content = `[记账提醒] 我${transaction.type === 'expense' ? '花了' : '赚了'} ${transaction.amount}${transaction.currency}，分类是${category}，备注是：“${transaction.remark}”`;
+                } else if (msg.type === 'schedule') {
+                    const schedule = state.schedules.find(item => item.id === msg.relatedId);
+                    if (!schedule) return null;
+                    const deadline = schedule.deadline ? formatDeadline(schedule.deadline) : '无';
+                    const description = schedule.description ? `说明是"${schedule.description}"` : '无';
+                    const status = schedule.completed ? '已完成' : '未完成';
+                    const eventType = schedule.eventType === 'long' ? '长期事件' : '单次事件';
+                    const importance = Number(schedule.importance || 0).toFixed(1);
+                    content = `[日程提醒-${eventType}] 我定了个${eventType}：'${schedule.title}'。重要程度是 ${importance}/10，截止日期是 ${deadline}，${description}，当前状态：${status}。`;
+                } else if (msg.type === 'image') {
+                    if (messageOffset < 5) {
+                        content = [{ type: 'image_url', image_url: { url: msg.content } }];
+                        tokens = 1000;
+                    } else {
+                        content = '[image]';
+                    }
+                } else if (msg.type === 'emoji_pack') {
+                    const match = String(msg.content || '').match(/\[emoji:(.*?)\]/);
+                    if (!match) return null;
+                    content = `[emoji:${match[1]}]`;
+                } else if (msg.type === 'ledger_summary') {
+                    const data = JSON.stringify(getFilteredTransactions().filtered);
+                    content = (systemPromptSettings.ledger || DEFAULT_SYSTEM_PROMPTS.ledger).replace('{data}', data);
+                } else if (msg.type === 'schedule_summary') {
+                    const data = JSON.stringify(state.schedules);
+                    content = (systemPromptSettings.schedule || DEFAULT_SYSTEM_PROMPTS.schedule).replace('{data}', data);
+                } else if (msg.type === 'pie_chart_summary') {
+                    content = (systemPromptSettings.pie || DEFAULT_SYSTEM_PROMPTS.pie).replace('{data}', msg.content);
+                } else {
+                    content = msg.content == null ? '' : msg.content;
+                }
+
+                if (!tokens) tokens = Math.max(1, String(content).length * 2);
+                const role = msg.role === 'assistant' ? 'assistant' : 'user';
+                const finalRole = msg.type !== 'text' && msg.role === 'user' ? 'user' : role;
+                const message = { role: finalRole, content };
+                if (finalRole === 'assistant' && msg.senderId) {
+                    const character = state.characters.find(item => item.id === msg.senderId);
+                    if (character) message.name = character.name;
+                }
+                return {
+                    source: msg,
+                    dateKey: getContextLocalDateKey(msg.timestamp),
+                    message,
+                    tokens
+                };
+            }
+
             function buildContext(maxTokens) {
-                let context = [];
+                const context = [];
                 let currentTokens = 0;
                 const reversedMessages = [...state.messages].reverse();
-                const { systemPromptSettings } = state.config;
-
-                // 这个变量现在用来记录“上一个已处理消息的日期”
-                let processedDateStr = null;
+                let processedDateKey = null;
 
                 for (let messageOffset = 0; messageOffset < reversedMessages.length; messageOffset++) {
-                    const msg = reversedMessages[messageOffset];
-                    let content;
-                    let msgTokens = 0;
-                    const role = msg.role === 'assistant' ? 'assistant' : 'user';
-
-                    // --- 这部分解析消息内容的代码保持不变 ---
-                    if (msg.type === 'transaction') {
-                        const t = state.transactions.find(t => t.id === msg.relatedId);
-                        if (!t) continue;
-                        content = `[记账提醒] 我${t.type === 'expense' ? '花了' : '赚了'} ${t.amount}${t.currency}，分类是${CATEGORIES[t.type].find(c => c.id === t.category)?.name || '未知'}，备注是：“${t.remark}”`;
-                        msgTokens = content.length * 2;
-                    } else if (msg.type === 'schedule') {
-                        const s = state.schedules.find(s => s.id === msg.relatedId);
-                        if (!s) continue;
-                        const deadlineStr = s.deadline ? formatDeadline(s.deadline) : '无';
-                        const descriptionText = s.description ? `说明是"${s.description}"` : "无";
-                        const statusText = s.completed ? '已完成' : '未完成';
-                        const eventTypeStr = s.eventType === 'long' ? '长期事件' : '单次事件';
-                        content = `[日程提醒-${eventTypeStr}] 我定了个${eventTypeStr}：'${s.title}'。重要程度是 ${s.importance.toFixed(1)}/10，截止日期是 ${deadlineStr}，${descriptionText}，当前状态：${statusText}。`;
-                        msgTokens = content.length * 2;
-                    } else if (msg.type === 'image') {
-                        if (messageOffset < 5) {
-                            content = [{ type: "image_url", image_url: { url: msg.content } }];
-                            msgTokens = 1000;
-                        } else {
-                            content = '[image]';
-                            msgTokens = content.length * 2;
-                        }
-                    } else if (msg.type === 'emoji_pack') {
-                        const match = msg.content.match(/\[emoji:(.*?)\]/);
-                        if (match) {
-                            content = `[emoji:${match[1]}]`;
-                            msgTokens = content.length * 2;
-                        }
-                    } else if (msg.type === 'ledger_summary') {
-                        const data = JSON.stringify(getFilteredTransactions().filtered);
-                        content = (systemPromptSettings.ledger || DEFAULT_SYSTEM_PROMPTS.ledger).replace('{data}', data);
-                        msgTokens = content.length * 2;
-                    } else if (msg.type === 'schedule_summary') {
-                        const data = JSON.stringify(state.schedules);
-                        content = (systemPromptSettings.schedule || DEFAULT_SYSTEM_PROMPTS.schedule).replace('{data}', data);
-                        msgTokens = content.length * 2;
-                    } else if (msg.type === 'pie_chart_summary') {
-                        content = (systemPromptSettings.pie || DEFAULT_SYSTEM_PROMPTS.pie).replace('{data}', msg.content);
-                        msgTokens = content.length * 2;
-                    } else {
-                        content = msg.content;
-                        msgTokens = content.length * 2;
+                    const formatted = formatMessageForContext(reversedMessages[messageOffset], { messageOffset });
+                    if (!formatted) continue;
+                    const marker = processedDateKey && formatted.dateKey !== processedDateKey
+                        ? createContextDateMarker(processedDateKey)
+                        : null;
+                    const additionalTokens = formatted.tokens + (marker?.tokens || 0);
+                    if (currentTokens + additionalTokens > maxTokens) break;
+                    if (marker) {
+                        context.unshift(marker.message);
+                        currentTokens += marker.tokens;
                     }
-                    // --- 消息解析结束 ---
-
-                    // ==================== 全新的智能时间戳逻辑 ====================
-                    const msgDate = new Date(msg.timestamp);
-                    const currentMsgDateStr = `${msgDate.getFullYear()}-${String(msgDate.getMonth() + 1).padStart(2, '0')}-${String(msgDate.getDate()).padStart(2, '0')}`;
-
-                    let dateMarkerContent = null;
-                    let dateMarkerTokens = 0;
-
-                    // 检查：如果这不是循环的第一个消息，并且当前消息的日期与上一个处理的消息日期不同
-                    if (processedDateStr && currentMsgDateStr !== processedDateStr) {
-                        // 那么，我们就在此插入一个分割线，内容是“上一个处理的日期”
-                        const prevDate = new Date(processedDateStr);
-                        const month = prevDate.getMonth() + 1;
-                        const day = prevDate.getDate();
-                        dateMarkerContent = `\n——以下是${month}月${day}日的消息——\n`;
-                        dateMarkerTokens = dateMarkerContent.length * 2;
-                    }
-
-                    // 检查加上分割线（如果需要）和消息本身后，是否会超出token限制
-                    if (currentTokens + msgTokens + dateMarkerTokens > maxTokens) {
-                        break; // 如果空间不足，则停止添加任何新消息
-                    }
-
-                    // 如果需要插入分割线，先把它放进上下文数组的最前面
-                    if (dateMarkerContent) {
-                        context.unshift({ role: 'system', content: dateMarkerContent });
-                        currentTokens += dateMarkerTokens;
-                    }
-
-                    // 接着，把当前这条消息放进上下文数组的最前面
-                    const finalRole = (msg.type !== 'text' && msg.role === 'user') ? 'user' : role;
-                    const messageForContext = { role: finalRole, content };
-
-                    if (finalRole === 'assistant' && msg.senderId) {
-                        const character = state.characters.find(c => c.id === msg.senderId);
-                        if (character) {
-                            messageForContext.name = character.name; // 使用 name 字段
-                        }
-                    }
-                    context.unshift(messageForContext);
-                    currentTokens += msgTokens;
-
-                    // 最后，更新“已处理日期”，为下一次循环做准备
-                    processedDateStr = currentMsgDateStr;
-                    // ===============================================================
+                    context.unshift(formatted.message);
+                    currentTokens += formatted.tokens;
+                    processedDateKey = formatted.dateKey;
                 }
                 return { context, tokens: currentTokens };
+            }
+
+            function getDiaryLocalBounds(targetDate, lookbackDays, lookaheadDays) {
+                const target = targetDate instanceof Date ? targetDate : new Date(targetDate);
+                const year = target.getFullYear();
+                const month = target.getMonth();
+                const day = target.getDate();
+                const safeLookback = Math.min(30, Math.max(0, Math.trunc(Number(lookbackDays) || 0)));
+                const safeLookahead = Math.min(30, Math.max(0, Math.trunc(Number(lookaheadDays) || 0)));
+                return {
+                    targetDateKey: getContextLocalDateKey(new Date(year, month, day).getTime()),
+                    startTime: new Date(year, month, day - safeLookback, 0, 0, 0, 0).getTime(),
+                    endTime: new Date(year, month, day + safeLookahead, 23, 59, 59, 999).getTime()
+                };
+            }
+
+            function getLocalCalendarDayOffset(dateKey, targetDateKey) {
+                const [year, month, day] = dateKey.split('-').map(Number);
+                const [targetYear, targetMonth, targetDay] = targetDateKey.split('-').map(Number);
+                return Math.round((Date.UTC(year, month - 1, day) - Date.UTC(targetYear, targetMonth - 1, targetDay)) / 86400000);
+            }
+
+            function buildDiaryContext(targetDate, lookbackDays, lookaheadDays, maxTokens = state.config.diaryContextMaxTokens || 8000) {
+                const bounds = getDiaryLocalBounds(targetDate, lookbackDays, lookaheadDays);
+                const tokenLimit = Math.max(0, Math.trunc(Number(maxTokens) || 0));
+                const recentMessages = new Set(state.messages.slice(-5));
+                const eligible = state.messages
+                    .filter(message => message.timestamp >= bounds.startTime && message.timestamp <= bounds.endTime)
+                    .map(message => formatMessageForContext(message, { messageOffset: recentMessages.has(message) ? 0 : 5 }))
+                    .filter(Boolean)
+                    .sort((a, b) => (a.source.timestamp - b.source.timestamp) || (Number(a.source.id) - Number(b.source.id)));
+
+                const groups = new Map();
+                eligible.forEach(entry => {
+                    if (!groups.has(entry.dateKey)) groups.set(entry.dateKey, []);
+                    groups.get(entry.dateKey).push(entry);
+                });
+                const prioritizedDates = [...groups.keys()].sort((a, b) => {
+                    const offsetA = getLocalCalendarDayOffset(a, bounds.targetDateKey);
+                    const offsetB = getLocalCalendarDayOffset(b, bounds.targetDateKey);
+                    return Math.abs(offsetA) - Math.abs(offsetB) || offsetA - offsetB;
+                });
+
+                const selected = [];
+                let usedTokens = 0;
+                prioritizedDates.forEach(dateKey => {
+                    const marker = createContextDateMarker(dateKey);
+                    let hasSelectedFromDate = false;
+                    groups.get(dateKey).forEach(entry => {
+                        const additionalTokens = entry.tokens + (hasSelectedFromDate ? 0 : marker.tokens);
+                        if (usedTokens + additionalTokens > tokenLimit) return;
+                        if (!hasSelectedFromDate) {
+                            usedTokens += marker.tokens;
+                            hasSelectedFromDate = true;
+                        }
+                        selected.push(entry);
+                        usedTokens += entry.tokens;
+                    });
+                });
+
+                selected.sort((a, b) => (a.source.timestamp - b.source.timestamp) || (Number(a.source.id) - Number(b.source.id)));
+                const context = [];
+                let renderedDateKey = null;
+                selected.forEach(entry => {
+                    if (entry.dateKey !== renderedDateKey) {
+                        context.push(createContextDateMarker(entry.dateKey).message);
+                        renderedDateKey = entry.dateKey;
+                    }
+                    context.push(entry.message);
+                });
+                return {
+                    context,
+                    tokens: usedTokens,
+                    startTime: bounds.startTime,
+                    endTime: bounds.endTime,
+                    targetDateKey: bounds.targetDateKey,
+                    sourceMessageCount: eligible.length,
+                    includedMessageCount: selected.length
+                };
             }
 
 
@@ -685,6 +753,10 @@
                 }
 
                 attachCopyCodeListeners(ELS.chatMessages); // 绑定复制代码按钮事件
+
+                if (typeof scheduleMemoryAutoSummary === 'function') {
+                    scheduleMemoryAutoSummary();
+                }
 
             }
 

@@ -564,7 +564,7 @@
                 container.innerHTML = `
         <div class="schedule-section-title" style="display: flex; justify-content: space-between; align-items: center;">
             <span>${dateStr} 的日记</span>
-            <button id="edit-diary-prompt-btn-inline" style="padding: 4px 8px; font-size: 12px; border-radius: 6px; background: var(--bg-soft); border: none; cursor: pointer;">编辑提示词</button>
+            <button id="edit-diary-prompt-btn-inline" style="padding: 4px 8px; font-size: 12px; border-radius: 6px; background: var(--bg-soft); border: none; cursor: pointer;">日记设置</button>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
             <label style="flex-shrink: 0;">角色：</label>
@@ -603,10 +603,7 @@
 
                 // 2. 绑定“编辑提示词”按钮的点击事件
                 container.querySelector('#edit-diary-prompt-btn-inline').addEventListener('click', () => {
-                    // 每次点击时，都从 state.config中读取最新的提示词
-                    document.getElementById('diary-system-prompt').value = state.config.diaryPrompt;
-
-                    // 弹出编辑模态框
+                    loadDiaryGenerationSettingsIntoUI();
                     document.getElementById('diary-prompt-modal').classList.add('visible');
                 });
 
