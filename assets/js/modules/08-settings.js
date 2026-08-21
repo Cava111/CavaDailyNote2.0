@@ -53,10 +53,281 @@
             }
 
             let editingProxyId = null;
-            function renderProxyList() { const list = document.getElementById('proxy-list'); list.innerHTML = ''; if (state.proxies.length === 0) { list.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">还没有任何反代，快添加一个吧！</p>'; } state.proxies.forEach(p => { const item = document.createElement('div'); item.className = 'list-item-setting'; item.innerHTML = `<div class="name">${p.name || '未命名反代'}</div><div class="details">URL: ${p.url}</div><div class="list-item-actions"><button class="edit-proxy" data-id="${p.id}" title="编辑">${appIcon('edit')}</button><button class="delete-proxy" data-id="${p.id}" title="删除">${appIcon('trash')}</button></div>`; item.querySelector('.edit-proxy').addEventListener('click', () => openProxyEditor(p.id)); item.querySelector('.delete-proxy').addEventListener('click', () => deleteProxy(p.id)); list.appendChild(item); }); }
-            function openProxyEditor(id = null) { editingProxyId = id; const modal = document.getElementById('proxy-editor-modal'); const title = document.getElementById('proxy-editor-title'); const name = document.getElementById('proxy-editor-name'); const url = document.getElementById('proxy-editor-url'); const apikey = document.getElementById('proxy-editor-apikey'); const models = document.getElementById('proxy-editor-models'); if (id) { const proxy = state.proxies.find(p => p.id === id); title.textContent = "编辑反代"; name.value = proxy.name || ''; url.value = proxy.url; apikey.value = proxy.apiKey; models.value = proxy.models ? proxy.models.split(',').join('\n') : ''; } else { title.textContent = "添加新反代"; name.value = ''; url.value = ''; apikey.value = ''; models.value = ''; } modal.classList.add('visible'); }
-            async function saveProxy() { const modelsValue = document.getElementById('proxy-editor-models').value.trim().split('\n').map(m => m.trim()).filter(Boolean).join(','); const proxyData = { name: document.getElementById('proxy-editor-name').value.trim(), url: document.getElementById('proxy-editor-url').value.trim(), apiKey: document.getElementById('proxy-editor-apikey').value.trim(), models: modelsValue }; if (editingProxyId) { proxyData.id = editingProxyId; await db.apiProxies.put(proxyData); const index = state.proxies.findIndex(p => p.id === editingProxyId); state.proxies[index] = proxyData; } else { const id = await db.apiProxies.add(proxyData); state.proxies.push({ ...proxyData, id }); } renderProxyList(); document.getElementById('proxy-editor-modal').classList.remove('visible'); }
-            async function deleteProxy(id) { if (confirm('确定要删除这个反代吗？')) { await db.apiProxies.delete(id); state.proxies = state.proxies.filter(p => p.id !== id); renderProxyList(); } }
+            let proxyEditorAvailableModels = [];
+            let proxyEditorSelectedModels = new Set();
+            let proxyEditorConnectionState = { status: 'idle', message: '尚未检测' };
+            let proxyConnectionAbortController = null;
+
+            function normalizeProxyBaseUrl(value) {
+                return value.trim().replace(/\/+$/, '').replace(/\/v1$/i, '');
+            }
+
+            function renderProxyList() {
+                const list = document.getElementById('proxy-list');
+                list.innerHTML = '';
+                if (state.proxies.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">还没有任何代理，快添加一个吧！</p>';
+                    return;
+                }
+
+                state.proxies.forEach(proxy => {
+                    const item = document.createElement('div');
+                    const titleRow = document.createElement('div');
+                    const name = document.createElement('div');
+                    const status = document.createElement('div');
+                    const dot = document.createElement('span');
+                    const statusText = document.createElement('span');
+                    const details = document.createElement('div');
+                    const modelCount = document.createElement('div');
+                    const actions = document.createElement('div');
+                    const editButton = document.createElement('button');
+                    const deleteButton = document.createElement('button');
+                    const enabledModels = proxy.models ? proxy.models.split(',').filter(Boolean) : [];
+                    const connectionStatus = proxy.connectionStatus === 'valid' || proxy.connectionStatus === 'invalid'
+                        ? proxy.connectionStatus
+                        : 'idle';
+
+                    item.className = 'list-item-setting';
+                    titleRow.className = 'proxy-list-title-row';
+                    name.className = 'name';
+                    name.textContent = proxy.name || '未命名代理';
+                    status.className = `proxy-list-status ${connectionStatus}`;
+                    dot.className = 'proxy-status-dot';
+                    statusText.textContent = connectionStatus === 'valid' ? 'Valid' : connectionStatus === 'invalid' ? '连接失败' : '未检测';
+                    status.append(dot, statusText);
+                    titleRow.append(name, status);
+
+                    details.className = 'details';
+                    details.textContent = `URL: ${proxy.url}`;
+                    modelCount.className = 'proxy-list-models';
+                    modelCount.textContent = `已启用 ${enabledModels.length} 个模型`;
+
+                    actions.className = 'list-item-actions';
+                    editButton.className = 'edit-proxy';
+                    editButton.title = '编辑';
+                    editButton.innerHTML = appIcon('edit');
+                    deleteButton.className = 'delete-proxy';
+                    deleteButton.title = '删除';
+                    deleteButton.innerHTML = appIcon('trash');
+                    editButton.addEventListener('click', () => openProxyEditor(proxy.id));
+                    deleteButton.addEventListener('click', () => deleteProxy(proxy.id));
+                    actions.append(editButton, deleteButton);
+                    item.append(titleRow, details, modelCount, actions);
+                    list.appendChild(item);
+                });
+            }
+
+            function setProxyConnectionState(status, message) {
+                proxyEditorConnectionState = { status, message };
+                const statusElement = document.getElementById('proxy-connection-status');
+                const testButton = document.getElementById('proxy-test-connection-btn');
+                const saveButton = document.querySelector('#proxy-editor-modal .save-btn');
+                statusElement.className = `proxy-connection-status ${status}`;
+                statusElement.querySelector('.proxy-status-text').textContent = message;
+                testButton.disabled = status === 'checking';
+                testButton.textContent = status === 'checking' ? '正在检测…' : '检测连接并拉取模型';
+                saveButton.disabled = status === 'checking';
+            }
+
+            function renderProxyModelPicker() {
+                const list = document.getElementById('proxy-models-list');
+                const summary = document.getElementById('proxy-models-summary');
+                const allModels = [...new Set([...proxyEditorAvailableModels, ...proxyEditorSelectedModels])]
+                    .sort((a, b) => {
+                        const selectedDifference = Number(proxyEditorSelectedModels.has(b)) - Number(proxyEditorSelectedModels.has(a));
+                        return selectedDifference || a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                    });
+
+                summary.textContent = proxyEditorAvailableModels.length
+                    ? `已启用 ${proxyEditorSelectedModels.size} / 可用 ${proxyEditorAvailableModels.length}`
+                    : proxyEditorSelectedModels.size
+                        ? `已启用 ${proxyEditorSelectedModels.size}（待刷新）`
+                        : '连接后自动拉取';
+                list.innerHTML = '';
+
+                if (allModels.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'proxy-models-empty';
+                    empty.textContent = '填写 Base URL 和 API Key 后将自动拉取模型';
+                    list.appendChild(empty);
+                    return;
+                }
+
+                allModels.forEach(modelId => {
+                    const option = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    const text = document.createElement('span');
+                    option.className = 'proxy-model-option';
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = proxyEditorSelectedModels.has(modelId);
+                    text.textContent = modelId;
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) proxyEditorSelectedModels.add(modelId);
+                        else proxyEditorSelectedModels.delete(modelId);
+                        renderProxyModelPicker();
+                    });
+                    option.append(checkbox, text);
+                    list.appendChild(option);
+                });
+            }
+
+            function extractProxyModels(payload) {
+                const source = Array.isArray(payload)
+                    ? payload
+                    : Array.isArray(payload?.data)
+                        ? payload.data
+                        : Array.isArray(payload?.models)
+                            ? payload.models
+                            : [];
+                return [...new Set(source.map(model => {
+                    if (typeof model === 'string') return model;
+                    return model?.id || model?.name || model?.model || '';
+                }).filter(Boolean))];
+            }
+
+            function extractProxyError(payload, fallback) {
+                return payload?.error?.message
+                    || payload?.message
+                    || (typeof payload?.error === 'string' ? payload.error : '')
+                    || fallback;
+            }
+
+            async function testProxyConnection() {
+                if (proxyEditorConnectionState.status === 'checking') return;
+                const rawUrl = document.getElementById('proxy-editor-url').value;
+                const apiKey = document.getElementById('proxy-editor-apikey').value.trim();
+                const baseUrl = normalizeProxyBaseUrl(rawUrl);
+
+                if (!baseUrl || !apiKey) {
+                    setProxyConnectionState('invalid', '连接失败：请填写 Base URL 和 API Key');
+                    return;
+                }
+
+                try {
+                    const parsedUrl = new URL(baseUrl);
+                    if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Base URL 必须使用 http 或 https');
+                } catch (error) {
+                    setProxyConnectionState('invalid', `连接失败：${error.message || 'Base URL 格式不正确'}`);
+                    return;
+                }
+
+                setProxyConnectionState('checking', '正在连接…');
+                const controller = new AbortController();
+                proxyConnectionAbortController = controller;
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+                try {
+                    const response = await fetch(`${baseUrl}/v1/models`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
+                        signal: controller.signal
+                    });
+                    let payload = null;
+                    try { payload = await response.json(); } catch (_) { /* 在下方统一报告非 JSON 响应 */ }
+                    if (!response.ok) {
+                        throw new Error(extractProxyError(payload, `HTTP ${response.status}`));
+                    }
+                    if (!payload) throw new Error('服务返回的不是有效 JSON');
+
+                    proxyEditorAvailableModels = extractProxyModels(payload);
+                    renderProxyModelPicker();
+                    setProxyConnectionState('valid', proxyEditorAvailableModels.length
+                        ? `Valid · 已拉取 ${proxyEditorAvailableModels.length} 个模型`
+                        : 'Valid · 服务未返回模型条目');
+                } catch (error) {
+                    if (proxyConnectionAbortController !== controller) return;
+                    const reason = error.name === 'AbortError'
+                        ? '请求超时'
+                        : error.message === 'Failed to fetch'
+                            ? '网络错误或跨域限制'
+                            : error.message;
+                    setProxyConnectionState('invalid', `连接失败：${reason}`);
+                } finally {
+                    clearTimeout(timeoutId);
+                    if (proxyConnectionAbortController === controller) proxyConnectionAbortController = null;
+                }
+            }
+
+            function openProxyEditor(id = null) {
+                editingProxyId = id;
+                const modal = document.getElementById('proxy-editor-modal');
+                const title = document.getElementById('proxy-editor-title');
+                const name = document.getElementById('proxy-editor-name');
+                const url = document.getElementById('proxy-editor-url');
+                const apiKey = document.getElementById('proxy-editor-apikey');
+                const modelsToggle = document.getElementById('proxy-models-toggle');
+                const modelsPanel = document.getElementById('proxy-models-panel');
+                const existingProxy = id ? state.proxies.find(proxy => proxy.id === id) : null;
+
+                title.textContent = existingProxy ? '编辑代理' : '添加新代理';
+                name.value = existingProxy?.name || '';
+                url.value = existingProxy?.url || '';
+                apiKey.value = existingProxy?.apiKey || '';
+                proxyEditorSelectedModels = new Set(existingProxy?.models ? existingProxy.models.split(',').filter(Boolean) : []);
+                proxyEditorAvailableModels = [...proxyEditorSelectedModels];
+                modelsPanel.hidden = true;
+                modelsToggle.setAttribute('aria-expanded', 'false');
+                modelsToggle.onclick = () => {
+                    modelsPanel.hidden = !modelsPanel.hidden;
+                    modelsToggle.setAttribute('aria-expanded', String(!modelsPanel.hidden));
+                };
+                document.getElementById('proxy-test-connection-btn').onclick = testProxyConnection;
+
+                const resetConnectionState = () => {
+                    if (proxyConnectionAbortController) proxyConnectionAbortController.abort();
+                    proxyConnectionAbortController = null;
+                    setProxyConnectionState('idle', '配置已更改，等待检测');
+                };
+                const autoTestIfReady = () => {
+                    if (url.value.trim() && apiKey.value.trim()) testProxyConnection();
+                };
+                url.oninput = resetConnectionState;
+                apiKey.oninput = resetConnectionState;
+                url.onchange = autoTestIfReady;
+                apiKey.onchange = autoTestIfReady;
+
+                renderProxyModelPicker();
+                setProxyConnectionState(existingProxy?.connectionStatus || 'idle', existingProxy?.connectionStatus === 'valid'
+                    ? 'Valid · 正在刷新模型列表'
+                    : existingProxy?.connectionStatus === 'invalid'
+                        ? '上次检测连接失败 · 正在重试'
+                        : '尚未检测');
+                modal.classList.add('visible');
+                if (existingProxy && url.value.trim() && apiKey.value.trim()) {
+                    setTimeout(testProxyConnection, 0);
+                }
+            }
+
+            async function saveProxy() {
+                const url = normalizeProxyBaseUrl(document.getElementById('proxy-editor-url').value);
+                const apiKey = document.getElementById('proxy-editor-apikey').value.trim();
+                if (!url || !apiKey) {
+                    setProxyConnectionState('invalid', '连接失败：请填写 Base URL 和 API Key');
+                    return;
+                }
+
+                const proxyData = {
+                    name: document.getElementById('proxy-editor-name').value.trim(),
+                    url,
+                    apiKey,
+                    models: [...proxyEditorSelectedModels].join(','),
+                    connectionStatus: proxyEditorConnectionState.status === 'valid' ? 'valid' : proxyEditorConnectionState.status === 'invalid' ? 'invalid' : 'idle',
+                    connectionMessage: proxyEditorConnectionState.message,
+                    connectionCheckedAt: ['valid', 'invalid'].includes(proxyEditorConnectionState.status) ? Date.now() : null
+                };
+                if (editingProxyId) {
+                    proxyData.id = editingProxyId;
+                    await db.apiProxies.put(proxyData);
+                    const index = state.proxies.findIndex(proxy => proxy.id === editingProxyId);
+                    state.proxies[index] = proxyData;
+                } else {
+                    const id = await db.apiProxies.add(proxyData);
+                    state.proxies.push({ ...proxyData, id });
+                }
+                renderProxyList();
+                document.getElementById('proxy-editor-modal').classList.remove('visible');
+            }
+            async function deleteProxy(id) { if (confirm('确定要删除这个代理吗？')) { await db.apiProxies.delete(id); state.proxies = state.proxies.filter(p => p.id !== id); renderProxyList(); } }
 
             let editingCharId = null;
             function renderCharacterList() { const list = document.getElementById('character-list'); list.innerHTML = ''; if (state.characters.length === 0) { list.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">还没有任何角色，快创建一个吧！</p>'; } state.characters.forEach(c => { const item = document.createElement('div'); item.className = 'list-item-setting'; item.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><img src="${c.avatar || DEFAULT_AVATAR}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"><span class="name">${c.name}</span></div><div class="list-item-actions"><button class="edit-char" data-id="${c.id}" title="编辑">${appIcon('edit')}</button><button class="delete-char" data-id="${c.id}" title="删除">${appIcon('trash')}</button></div>`; item.querySelector('.edit-char').addEventListener('click', () => openCharacterEditor(c.id)); item.querySelector('.delete-char').addEventListener('click', () => deleteCharacter(c.id)); list.appendChild(item); }); }

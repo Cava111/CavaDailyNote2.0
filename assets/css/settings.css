@@ -335,7 +335,7 @@
         .list-item-setting {
             background-color: var(--bg-secondary);
             border-radius: 8px;
-            padding: 12px;
+            padding: 12px 78px 12px 12px;
             margin-bottom: 10px;
             box-shadow: 0 1px 3px var(--shadow-light);
             position: relative;
@@ -349,6 +349,217 @@
             font-size: 12px;
             color: var(--text-secondary);
             word-break: break-all;
+        }
+
+        .proxy-list-title-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            margin-bottom: 3px;
+        }
+
+        .proxy-list-title-row .name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .proxy-list-models {
+            margin-top: 4px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .proxy-list-status,
+        .proxy-connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .proxy-list-status {
+            flex-shrink: 0;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: var(--bg-main);
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .proxy-status-dot {
+            width: 8px;
+            height: 8px;
+            flex: 0 0 8px;
+            border-radius: 50%;
+            background: #9e9e9e;
+            box-shadow: 0 0 0 2px rgba(158, 158, 158, 0.14);
+        }
+
+        .proxy-list-status.valid,
+        .proxy-connection-status.valid {
+            color: #27884d;
+        }
+
+        .proxy-list-status.valid .proxy-status-dot,
+        .proxy-connection-status.valid .proxy-status-dot {
+            background: #36b96b;
+            box-shadow: 0 0 0 2px rgba(54, 185, 107, 0.16);
+        }
+
+        .proxy-list-status.invalid,
+        .proxy-connection-status.invalid {
+            color: #c64545;
+        }
+
+        .proxy-list-status.invalid .proxy-status-dot,
+        .proxy-connection-status.invalid .proxy-status-dot {
+            background: #e05252;
+            box-shadow: 0 0 0 2px rgba(224, 82, 82, 0.16);
+        }
+
+        .proxy-connection-status.checking .proxy-status-dot {
+            background: var(--accent-secondary);
+            animation: proxy-status-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes proxy-status-pulse {
+            50% { opacity: 0.35; transform: scale(0.78); }
+        }
+
+        .proxy-connection-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 2px 0 15px;
+        }
+
+        #proxy-test-connection-btn {
+            flex: 0 0 auto;
+            padding: 9px 11px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--accent-primary);
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #proxy-test-connection-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .proxy-connection-status {
+            overflow: hidden;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .proxy-status-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .proxy-models-group {
+            overflow: hidden;
+            border: 1px solid var(--accent-primary);
+            border-radius: 10px;
+            background: var(--bg-secondary);
+        }
+
+        .proxy-models-toggle {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 44px;
+            padding: 0 11px;
+            border: 0;
+            background: transparent;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .proxy-models-label {
+            font-weight: 600;
+        }
+
+        #proxy-models-summary {
+            overflow: hidden;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-align: right;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .proxy-models-chevron {
+            font-size: 18px;
+            transition: transform 160ms ease;
+        }
+
+        .proxy-models-toggle[aria-expanded="true"] .proxy-models-chevron {
+            transform: rotate(180deg);
+        }
+
+        #proxy-models-panel {
+            padding: 0 10px 10px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #proxy-models-panel[hidden] {
+            display: none;
+        }
+
+        .proxy-models-hint {
+            margin: 9px 1px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .proxy-models-list {
+            max-height: 230px;
+            overflow-y: auto;
+        }
+
+        .proxy-model-option {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 38px;
+            padding: 0 6px;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+
+        .proxy-model-option:hover {
+            background: var(--bg-main);
+        }
+
+        .proxy-model-option input {
+            width: 17px;
+            height: 17px;
+            flex: 0 0 auto;
+            accent-color: var(--accent-secondary);
+        }
+
+        .proxy-model-option span {
+            overflow: hidden;
+            font-size: 13px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .proxy-models-empty {
+            padding: 18px 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-align: center;
         }
 
         .list-item-actions {

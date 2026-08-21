@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cava记事本1.3.5beta</title>
+    <title>Cava记事本2.0beta</title>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
@@ -320,7 +320,7 @@
                         <p style="font-size:12px; color: var(--text-secondary); margin-top:-10px; margin-bottom: 15px;">
                             此设置用于限制发送给AI的聊天记录长度，防止超出模型限制。1个汉字约等于2个Token。</p>
                         <button class="form-button secondary" id="manage-system-prompts-btn">管理系统提示词</button>
-                        <button class="form-button secondary" id="manage-proxies-btn">管理API反代</button>
+                        <button class="form-button secondary" id="manage-proxies-btn">管理API代理</button>
                         <button class="form-button secondary" id="manage-characters-btn">管理AI角色</button>
                         <button class="form-button secondary" id="manage-emoji-packs-btn">管理我的表情包</button>
                     </div>
@@ -480,23 +480,40 @@
     </div>
     <div id="api-proxy-modal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header">管理API反代</div>
+            <div class="modal-header">管理API代理</div>
             <div class="modal-body">
-                <div id="proxy-list"></div><button class="form-button" id="add-proxy-btn">＋ 添加新反代</button>
+                <div id="proxy-list"></div><button class="form-button" id="add-proxy-btn">＋ 添加新代理</button>
             </div>
             <div class="modal-footer"><button class="cancel-btn" id="close-proxy-modal">关闭</button></div>
         </div>
     </div>
     <div id="proxy-editor-modal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header" id="proxy-editor-title">编辑反代</div>
+            <div class="modal-header" id="proxy-editor-title">编辑代理</div>
             <div class="modal-body">
                 <div class="form-group"><label>自定义名称</label><input type="text" id="proxy-editor-name"
-                        placeholder="如 Cava的API"></div>
-                <div class="form-group"><label>URL (无需 /v1)</label><input type="text" id="proxy-editor-url"></div>
+                        placeholder="如 我的API"></div>
+                <div class="form-group"><label>Base URL</label><input type="url" id="proxy-editor-url"
+                        placeholder="https://api.example.com 或 https://api.example.com/v1"></div>
                 <div class="form-group"><label>API Key</label><input type="password" id="proxy-editor-apikey"></div>
-                <div class="form-group"><label>Model(s) (换行分隔)</label><textarea id="proxy-editor-models" rows="3"
-                        placeholder="gpt-4o&#10;claude-3-opus-20240229"></textarea></div>
+                <div class="proxy-connection-row">
+                    <button type="button" id="proxy-test-connection-btn">检测连接并拉取模型</button>
+                    <div id="proxy-connection-status" class="proxy-connection-status idle" role="status" aria-live="polite">
+                        <span class="proxy-status-dot" aria-hidden="true"></span>
+                        <span class="proxy-status-text">尚未检测</span>
+                    </div>
+                </div>
+                <div class="form-group proxy-models-group">
+                    <button type="button" id="proxy-models-toggle" class="proxy-models-toggle" aria-expanded="false">
+                        <span class="proxy-models-label">Models</span>
+                        <span id="proxy-models-summary">连接后自动拉取</span>
+                        <span class="proxy-models-chevron" aria-hidden="true">⌄</span>
+                    </button>
+                    <div id="proxy-models-panel" hidden>
+                        <p class="proxy-models-hint">勾选要启用的模型；已启用模型会自动置顶。</p>
+                        <div id="proxy-models-list" class="proxy-models-list"></div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer"><button class="cancel-btn">取消</button><button class="save-btn">保存</button></div>
         </div>
