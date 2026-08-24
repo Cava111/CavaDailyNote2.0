@@ -500,11 +500,11 @@
                 const msg = state.messages.find(m => m.id === msgId);
                 if (!msg) return;
                 if (msg.type === 'transaction' && msg.relatedId) {
-                    await db.transactions.delete(msg.relatedId);
+                    await softDeleteCloudRecord('transactions', msg.relatedId);
                     state.transactions = state.transactions.filter(t => t.id !== msg.relatedId);
                     renderLedger();
                 } else if (msg.type === 'schedule' && msg.relatedId) {
-                    await db.schedules.delete(msg.relatedId);
+                    await softDeleteCloudRecord('schedules', msg.relatedId);
                     state.schedules = state.schedules.filter(s => s.id !== msg.relatedId);
                     renderSchedules();
                 }
@@ -555,8 +555,8 @@
                     }
                 }
 
-                if (transIdsToDelete.length > 0) await db.transactions.bulkDelete(transIdsToDelete);
-                if (scheduleIdsToDelete.length > 0) await db.schedules.bulkDelete(scheduleIdsToDelete);
+                if (transIdsToDelete.length > 0) await softDeleteCloudRecords('transactions', transIdsToDelete);
+                if (scheduleIdsToDelete.length > 0) await softDeleteCloudRecords('schedules', scheduleIdsToDelete);
                 await deleteMessageRecords(msgIdsToDelete);
 
                 state.transactions = state.transactions.filter(t => !transIdsToDelete.includes(t.id));
@@ -598,7 +598,7 @@
                     deleteBtn.onclick = async () => {
                         if (confirm('确定要删除这条记账及其聊天记录吗？')) {
                             const msg = state.messages.find(m => m.relatedId === id && m.type === 'transaction');
-                            await db.transactions.delete(id);
+                            await softDeleteCloudRecord('transactions', id);
                             state.transactions = state.transactions.filter(t => t.id !== id);
                             if (msg) {
                                 await deleteMessageRecord(msg.id);

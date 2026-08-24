@@ -54,6 +54,33 @@
                 });
             });
 
+            // v13 adds cloud identity + last-write metadata to every non-binary data store.
+            // Numeric local IDs stay untouched so the existing UI and relations keep working.
+            db.version(13).stores({
+                appConfig: 'id, &syncId, updatedAt, deletedAt, syncStatus',
+                transactions: '++id, &syncId, timestamp, updatedAt, deletedAt, syncStatus, type, category, amount, currency, remark',
+                messages: '++id, &syncId, timestamp, updatedAt, deletedAt, syncStatus, role, content, type, senderId, relatedId',
+                apiProxies: '++id, &syncId, updatedAt, deletedAt, syncStatus, name, url, apiKey, models',
+                aiCharacters: '++id, &syncId, updatedAt, deletedAt, syncStatus, name, prompt, avatar, proxyId, model, backupProxyId, backupModel',
+                currencies: 'code, &syncId, updatedAt, deletedAt, syncStatus, name, rate',
+                transactionTemplates: '++id, &syncId, updatedAt, deletedAt, syncStatus, name, type, category, amount, currency, remark',
+                schedules: '++id, &syncId, timestamp, updatedAt, deletedAt, syncStatus, title, description, importance, deadline, eventType, completed, recurrence, endDate, completedDates',
+                emojiPacks: '++id, name, image, timestamp',
+                diaries: '++id, &syncId, date, charId, updatedAt, deletedAt, syncStatus, content, timestamp',
+                memories: '++id, &syncId, startTime, endTime, updatedAt, deletedAt, syncStatus, sourceType, sourceStartId, sourceEndId, recallMode, sortOrder, createdAt'
+            }).upgrade(async transaction => {
+                const migrationTime = Date.now();
+                for (const storeName of CAVA_GENERIC_SYNC_STORES) {
+                    await transaction.table(storeName).toCollection().modify(record => {
+                        Object.assign(record, ensureCloudEntityMetadata(storeName, record, migrationTime, true));
+                    });
+                }
+                await transaction.table('messages').toCollection().modify(message => {
+                    Object.assign(message, ensureMessageSyncMetadata(message, migrationTime));
+                    message.syncStatus = isMessageCloudSyncEligible(message) ? 'pending' : 'local_only';
+                });
+            });
+
             const DEFAULT_SYSTEM_PROMPTS = {
                 sendTime: true,
                 sendModel: true,
@@ -163,10 +190,125 @@
                 return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
             }
 
+            const CAVA_GENERIC_SYNC_STORES = Object.freeze([
+                'appConfig',
+                'apiProxies',
+                'aiCharacters',
+                'transactions',
+                'transactionTemplates',
+                'currencies',
+                'schedules',
+                'diaries',
+                'memories'
+            ]);
+            let cavaApplyingRemoteChanges = false;
+            let cavaCloudMetadataHooksReady = false;
+
+            function getCloudEntityLegacySeed(storeName, record) {
+                if (storeName === 'appConfig') return ['main'];
+                if (storeName === 'currencies') return [record.code];
+                if (storeName === 'apiProxies') return [record.id, record.name, record.url];
+                if (storeName === 'aiCharacters') return [record.id, record.name, record.prompt];
+                if (storeName === 'transactions') return [record.id, record.timestamp, record.type, record.amount, record.currency, record.remark];
+                if (storeName === 'transactionTemplates') return [record.id, record.name, record.type, record.amount, record.currency];
+                if (storeName === 'schedules') return [record.id, record.timestamp, record.title, record.eventType];
+                if (storeName === 'diaries') return [record.id, record.date, record.charId, record.timestamp];
+                if (storeName === 'memories') return [record.id, record.createdAt, record.startTime, record.endTime, record.content];
+                return [record.id, record.createdAt, record.updatedAt];
+            }
+
+            function ensureCloudEntityMetadata(storeName, record, fallbackTime = Date.now(), forcePending = false) {
+                const source = record || {};
+                const createdAt = Number(source.createdAt) || Number(source.timestamp) || fallbackTime;
+                const needsDeterministicId = forcePending || storeName === 'appConfig' || storeName === 'currencies';
+                const syncId = source.syncId || (needsDeterministicId
+                    ? createLegacySyncId(storeName, getCloudEntityLegacySeed(storeName, source))
+                    : createCavaSyncId());
+                return {
+                    ...source,
+                    syncId,
+                    createdAt,
+                    updatedAt: Number(source.updatedAt) || createdAt,
+                    deletedAt: source.deletedAt || null,
+                    syncStatus: forcePending ? 'pending' : (source.syncStatus || 'pending')
+                };
+            }
+
+            function scheduleCloudSyncFromLocalChange() {
+                setTimeout(() => {
+                    if (typeof scheduleMessageSync === 'function') scheduleMessageSync();
+                    if (typeof refreshCloudSyncUI === 'function') refreshCloudSyncUI();
+                }, 0);
+            }
+
+            function registerCavaCloudMetadataHooks() {
+                if (cavaCloudMetadataHooksReady) return;
+                cavaCloudMetadataHooksReady = true;
+                CAVA_GENERIC_SYNC_STORES.forEach(storeName => {
+                    const table = db.table(storeName);
+                    table.hook('creating', (_primaryKey, record) => {
+                        if (cavaApplyingRemoteChanges) return;
+                        Object.assign(record, ensureCloudEntityMetadata(storeName, record));
+                        scheduleCloudSyncFromLocalChange();
+                    });
+                    table.hook('updating', (changes, _primaryKey, existing) => {
+                        if (cavaApplyingRemoteChanges) return;
+                        const now = Date.now();
+                        const isExplicitDelete = Object.prototype.hasOwnProperty.call(changes, 'deletedAt')
+                            && changes.deletedAt != null;
+                        const shouldRestore = !isExplicitDelete && existing.deletedAt != null;
+                        scheduleCloudSyncFromLocalChange();
+                        return {
+                            syncId: existing.syncId || ensureCloudEntityMetadata(storeName, existing, now).syncId,
+                            createdAt: Number(existing.createdAt) || Number(existing.timestamp) || now,
+                            updatedAt: now,
+                            syncStatus: 'pending',
+                            ...(shouldRestore ? { deletedAt: null } : {})
+                        };
+                    });
+                });
+            }
+
+            async function withCavaInternalCloudWrite(callback) {
+                const previous = cavaApplyingRemoteChanges;
+                cavaApplyingRemoteChanges = true;
+                try {
+                    return await callback();
+                } finally {
+                    cavaApplyingRemoteChanges = previous;
+                }
+            }
+
+            async function softDeleteCloudRecord(storeName, primaryKey) {
+                const table = db.table(storeName);
+                const current = await table.get(primaryKey);
+                if (!current) return false;
+                const now = Date.now();
+                await table.update(primaryKey, { deletedAt: now, updatedAt: now, syncStatus: 'pending' });
+                scheduleCloudSyncFromLocalChange();
+                return true;
+            }
+
+            async function softDeleteCloudRecords(storeName, primaryKeys) {
+                const uniqueKeys = [...new Set(primaryKeys || [])];
+                if (!uniqueKeys.length) return;
+                const table = db.table(storeName);
+                const now = Date.now();
+                await db.transaction('rw', table, async () => {
+                    for (const primaryKey of uniqueKeys) {
+                        const current = await table.get(primaryKey);
+                        if (current) await table.update(primaryKey, { deletedAt: now, updatedAt: now, syncStatus: 'pending' });
+                    }
+                });
+                scheduleCloudSyncFromLocalChange();
+            }
+
+            registerCavaCloudMetadataHooks();
+
             function isMessageCloudSyncEligible(messageOrType) {
-                const type = typeof messageOrType === 'string' ? messageOrType : messageOrType?.type;
-                // Images and records that depend on unsynced ledger/schedule rows stay local for this MVP.
-                return type === 'text' || type === 'emoji_pack';
+                const message = typeof messageOrType === 'string' ? { type: messageOrType } : (messageOrType || {});
+                if (message.type === 'image') return false;
+                return !(typeof message.content === 'string' && /data:[^;,]+;base64,/i.test(message.content));
             }
 
             function ensureMessageSyncMetadata(message, fallbackTime = Date.now()) {
@@ -278,15 +420,15 @@
             async function loadDataFromDB() {
                 const [config, proxies, characters, messages, transactions, currencies, schedules, emojiPacks, diaries, memories] = await Promise.all([
                     db.appConfig.get('main'),
-                    db.apiProxies.toArray(),
-                    db.aiCharacters.toArray(),
+                    db.apiProxies.filter(item => !item.deletedAt).toArray(),
+                    db.aiCharacters.filter(item => !item.deletedAt).toArray(),
                     db.messages.orderBy('timestamp').filter(message => !message.deletedAt).toArray(),
-                    db.transactions.orderBy('timestamp').toArray(),
-                    db.currencies.toArray(),
-                    db.schedules.toArray(),
+                    db.transactions.orderBy('timestamp').filter(item => !item.deletedAt).toArray(),
+                    db.currencies.filter(item => !item.deletedAt).toArray(),
+                    db.schedules.filter(item => !item.deletedAt).toArray(),
                     db.emojiPacks.toArray(),
-                    db.diaries.toArray(),
-                    db.memories.orderBy('sortOrder').toArray()
+                    db.diaries.filter(item => !item.deletedAt).toArray(),
+                    db.memories.orderBy('sortOrder').filter(item => !item.deletedAt).toArray()
                 ]);
 
                 const defaultDiaryPrompt = `请你写一篇{char}的视角中与{user}在{date}的这一天高度相关的日记，主要是你在这一天的对话中，对{user}行为的心理活动经过和情感变化，结合过往对话记录来写。日记写作风格需要按照依照{char}的性格特点。你在写日记时，对{char}统一使用第一人称「我」（如“我收到了她的消息”），对{user}则一般使用第三人称（如“她今天买奶茶花了二十块”），但偶尔插入对{user}第二人称直白的话（如“我想让你知道”），加强情感冲击。直接以“{date}，记录者：{char}”开头，2000字左右~`;

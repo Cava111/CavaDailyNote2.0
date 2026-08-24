@@ -718,7 +718,7 @@
                 const id = state.currentlyEditingScheduleId;
                 const msg = state.messages.find(m => m.relatedId === id && m.type === 'schedule');
 
-                await db.schedules.delete(id);
+                await softDeleteCloudRecord('schedules', id);
                 state.schedules = state.schedules.filter(s => s.id !== id);
                 if (msg) {
                     await deleteMessageRecord(msg.id);

@@ -418,7 +418,7 @@
 
             async function deleteMemoryItem(memoryId) {
                 if (!confirm('确定删除这条 Memory 吗？总结进度游标不会回退。')) return;
-                await db.memories.delete(memoryId);
+                await softDeleteCloudRecord('memories', memoryId);
                 state.memories = state.memories.filter(memory => memory.id !== memoryId);
                 await persistMemorySortOrder();
                 renderMemoryList();

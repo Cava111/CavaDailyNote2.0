@@ -140,7 +140,7 @@
                 }
 
                 async function loadTemplates() {
-                    const templates = await db.transactionTemplates.toArray();
+                    const templates = await db.transactionTemplates.filter(item => !item.deletedAt).toArray();
                     const listEl = document.getElementById('template-list');
                     listEl.innerHTML = '';
 
@@ -167,7 +167,7 @@
                             btn.addEventListener('click', async (e) => {
                                 e.stopPropagation();
                                 if (confirm('删除此模板？')) {
-                                    await db.transactionTemplates.delete(parseInt(e.target.dataset.id));
+                                    await softDeleteCloudRecord('transactionTemplates', parseInt(e.target.dataset.id));
                                     await loadTemplates();
                                 }
                             });
@@ -448,7 +448,7 @@
                     document.getElementById('delete-ledger-btn').onclick = async () => {
                         if (confirm('确定要删除这条记账及其聊天记录吗？')) {
                             const msg = state.messages.find(m => m.relatedId === id && m.type === 'transaction');
-                            await db.transactions.delete(id);
+                            await softDeleteCloudRecord('transactions', id);
                             state.transactions = state.transactions.filter(t => t.id !== id);
                             if (msg) {
                                 await deleteMessageRecord(msg.id);

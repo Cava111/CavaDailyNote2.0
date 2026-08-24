@@ -327,7 +327,7 @@
                 renderProxyList();
                 document.getElementById('proxy-editor-modal').classList.remove('visible');
             }
-            async function deleteProxy(id) { if (confirm('确定要删除这个代理吗？')) { await db.apiProxies.delete(id); state.proxies = state.proxies.filter(p => p.id !== id); renderProxyList(); } }
+            async function deleteProxy(id) { if (confirm('确定要删除这个代理吗？')) { await softDeleteCloudRecord('apiProxies', id); state.proxies = state.proxies.filter(p => p.id !== id); renderProxyList(); } }
 
             let editingCharId = null;
             function renderCharacterList() { const list = document.getElementById('character-list'); list.innerHTML = ''; if (state.characters.length === 0) { list.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">还没有任何角色，快创建一个吧！</p>'; } state.characters.forEach(c => { const item = document.createElement('div'); item.className = 'list-item-setting'; item.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><img src="${c.avatar || DEFAULT_AVATAR}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"><span class="name">${c.name}</span></div><div class="list-item-actions"><button class="edit-char" data-id="${c.id}" title="编辑">${appIcon('edit')}</button><button class="delete-char" data-id="${c.id}" title="删除">${appIcon('trash')}</button></div>`; item.querySelector('.edit-char').addEventListener('click', () => openCharacterEditor(c.id)); item.querySelector('.delete-char').addEventListener('click', () => deleteCharacter(c.id)); list.appendChild(item); }); }
@@ -409,7 +409,7 @@
                 document.getElementById('character-editor-modal').classList.remove('visible');
                 editingCharId = null; // 清空正在编辑的ID
             }
-            async function deleteCharacter(id) { if (confirm('确定要删除这个角色吗？')) { await db.aiCharacters.delete(id); state.characters = state.characters.filter(c => c.id !== id); renderCharacterList(); renderChatCharacterBar(); renderChatMessages(); } }
+            async function deleteCharacter(id) { if (confirm('确定要删除这个角色吗？')) { await softDeleteCloudRecord('aiCharacters', id); state.characters = state.characters.filter(c => c.id !== id); renderCharacterList(); renderChatCharacterBar(); renderChatMessages(); } }
 
             let currentlyEditingCurrencyCode = null;
             function openCurrencyEditor(curr = null) {
@@ -434,7 +434,7 @@
                 const currencyData = { code, name, rate };
                 await db.currencies.put(currencyData);
 
-                state.currencies = await db.currencies.toArray();
+                state.currencies = await db.currencies.filter(item => !item.deletedAt).toArray();
                 renderCurrencyList();
                 populateLedgerCurrencyFilter();
                 document.getElementById('currency-editor-modal').classList.remove('visible');
@@ -462,7 +462,7 @@
                         deleteBtn.innerHTML = appIcon('trash');
                         deleteBtn.onclick = async () => {
                             if (confirm(`确定要删除 "${curr.name}" 吗？`)) {
-                                await db.currencies.delete(curr.code);
+                                await softDeleteCloudRecord('currencies', curr.code);
                                 state.currencies = state.currencies.filter(c => c.code !== curr.code);
                                 renderCurrencyList();
                                 populateLedgerCurrencyFilter();

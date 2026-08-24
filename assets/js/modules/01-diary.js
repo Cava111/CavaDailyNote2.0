@@ -176,7 +176,7 @@
                 );
 
                 if (diary) {
-                    await db.diaries.delete(diary.id);
+                    await softDeleteCloudRecord('diaries', diary.id);
                     state.diaries = state.diaries.filter(d => d.id !== diary.id);
                     // 删除后，刷新日记区域
                     updateDiaryContentArea(state.currentDiaryDate);
