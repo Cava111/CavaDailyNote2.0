@@ -275,7 +275,7 @@
         }
 
         .setting-group {
-            margin-bottom: 25px;
+            margin-bottom: 16px;
         }
 
         .setting-group-title {
@@ -284,6 +284,66 @@
             margin-bottom: 15px;
             padding-bottom: 5px;
             border-bottom: 2px solid var(--accent-primary);
+        }
+
+        .setting-group-always-open {
+            margin-bottom: 20px;
+        }
+
+        .settings-accordion {
+            overflow: hidden;
+            border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+            border-radius: 14px;
+            background: var(--bg-secondary);
+            box-shadow: 0 2px 8px var(--shadow-light, rgba(0, 0, 0, 0.05));
+        }
+
+        .settings-accordion > .setting-group-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 24px;
+            margin: 0;
+            padding: 16px;
+            border: 0;
+            cursor: pointer;
+            list-style: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .settings-accordion > .setting-group-title::-webkit-details-marker {
+            display: none;
+        }
+
+        .settings-accordion > .setting-group-title::after {
+            content: '';
+            flex: 0 0 8px;
+            width: 8px;
+            height: 8px;
+            margin-right: 3px;
+            border-right: 2px solid var(--text-secondary);
+            border-bottom: 2px solid var(--text-secondary);
+            transform: rotate(45deg) translateY(-2px);
+            transition: transform 0.2s ease;
+        }
+
+        .settings-accordion[open] > .setting-group-title {
+            border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+        }
+
+        .settings-accordion[open] > .setting-group-title::after {
+            transform: rotate(225deg) translate(-2px, -2px);
+        }
+
+        .settings-accordion > .setting-group-title:focus-visible {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: -3px;
+        }
+
+        .setting-group-content {
+            padding: 16px 16px 2px;
         }
 
         .form-group {
