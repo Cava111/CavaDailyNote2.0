@@ -350,41 +350,8 @@
                     <div class="right-action"></div>
                 </div>
                 <div class="page-content">
-                    <div class="setting-group cloud-sync-group">
-                        <div class="setting-group-title">云同步（目前只同步文字聊天）</div>
-                        <p class="cloud-sync-explainer">不登录时完全保持本地使用。登录后，文字和表情名称会同步；图片、头像、背景、表情包图片、账本、日程和 API Key 都不会上传。</p>
-                        <div class="form-group">
-                            <label for="cloud-supabase-url">Supabase Project URL</label>
-                            <input type="url" id="cloud-supabase-url" placeholder="https://abcdef.supabase.co" autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label for="cloud-supabase-key">Publishable key / anon public key</label>
-                            <input type="password" id="cloud-supabase-key" placeholder="这里只能填公开 key，绝对不要填 service_role" autocomplete="off">
-                        </div>
-                        <button type="button" class="form-button secondary" id="cloud-save-project-btn">保存 Supabase 连接</button>
-                        <div class="cloud-account-divider"></div>
-                        <div id="cloud-current-user" class="cloud-current-user">当前未登录</div>
-                        <div class="form-group">
-                            <label for="cloud-email">邮箱</label>
-                            <input type="email" id="cloud-email" autocomplete="email" placeholder="you@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="cloud-password">密码</label>
-                            <input type="password" id="cloud-password" autocomplete="current-password" placeholder="至少 6 位">
-                        </div>
-                        <div class="cloud-account-actions">
-                            <button type="button" class="form-button secondary" id="cloud-register-btn">注册</button>
-                            <button type="button" class="form-button" id="cloud-login-btn">登录</button>
-                            <button type="button" class="form-button secondary" id="cloud-logout-btn" hidden>退出登录</button>
-                        </div>
-                        <div class="cloud-sync-summary">
-                            <span id="cloud-sync-status" data-status="local">本地模式</span>
-                            <button type="button" id="cloud-sync-now-btn">立即同步</button>
-                        </div>
-                        <div id="cloud-account-notice" class="cloud-account-notice" role="status" aria-live="polite"></div>
-                    </div>
-                    <div class="setting-group">
-                        <div class="setting-group-title">外观设置</div>
+                    <div class="setting-group setting-group-always-open">
+                        <div class="setting-group-title">外观选择</div>
                         <div class="form-group">
                             <label>主题选择</label>
                             <div class="theme-selector">
@@ -416,8 +383,9 @@
                                     type="file" id="setting-chat-bg-input" accept="image/*"></div>
                         </div>
                     </div>
-                    <div class="setting-group">
-                        <div class="setting-group-title">我的资料</div>
+                    <details class="setting-group settings-accordion">
+                        <summary class="setting-group-title">我的资料</summary>
+                        <div class="setting-group-content">
                         <div class="form-group"><label>群聊名称</label><input type="text" id="setting-chat-name"></div>
                         <div class="form-group"><label>头像</label>
                             <div class="avatar-upload"><img id="setting-chat-avatar-preview"><button
@@ -431,31 +399,73 @@
                                 <option value="male">男</option>
                                 <option value="female">女</option>
                             </select></div>
-                        <div class="form-group"><label>个人说明</label><textarea id="setting-user-bio"
-                                placeholder="可选填"></textarea></div>
-                    </div>
-                    <div class="setting-group">
-                        <div class="setting-group-title">AI 设置</div>
+                            <div class="form-group"><label>个人说明</label><textarea id="setting-user-bio"
+                                    placeholder="可选填"></textarea></div>
+                        </div>
+                    </details>
+                    <details class="setting-group settings-accordion">
+                        <summary class="setting-group-title">AI 设置</summary>
+                        <div class="setting-group-content">
                         <div class="form-group"><label for="max-tokens-input">最大上下文长度 (Token)</label><input
                                 type="number" id="max-tokens-input" placeholder="建议 4000-8000"></div>
                         <p style="font-size:12px; color: var(--text-secondary); margin-top:-10px; margin-bottom: 15px;">
                             此设置用于限制发送给AI的聊天记录长度，防止超出模型限制。1个汉字约等于2个Token。</p>
                         <button class="form-button secondary" id="manage-system-prompts-btn">管理系统提示词</button>
                         <button class="form-button secondary" id="manage-proxies-btn">管理API代理</button>
-                        <button class="form-button secondary" id="manage-characters-btn">管理AI角色</button>
-                        <button class="form-button secondary" id="manage-emoji-packs-btn">管理我的表情包</button>
-                    </div>
-                    <div class="setting-group">
-                        <div class="setting-group-title">币种设置</div>
-                        <button class="form-button secondary" id="manage-currencies-btn">管理币种和汇率</button>
-                    </div>
-                    <div class="setting-group">
-                        <div class="setting-group-title">记录管理</div>
-                        <button class="form-button secondary" id="export-json-btn">导出为 JSON</button>
-                        <button class="form-button secondary" id="import-json-btn">从 JSON 导入</button>
-                        <input type="file" id="import-json-input" accept=".json" style="display:none;">
-                        <button class="form-button secondary" id="export-txt-btn">导出为 TXT</button>
-                    </div>
+                            <button class="form-button secondary" id="manage-characters-btn">管理AI角色</button>
+                            <button class="form-button secondary" id="manage-emoji-packs-btn">管理我的表情包</button>
+                        </div>
+                    </details>
+                    <details class="setting-group settings-accordion">
+                        <summary class="setting-group-title">币种设置</summary>
+                        <div class="setting-group-content">
+                            <button class="form-button secondary" id="manage-currencies-btn">管理币种和汇率</button>
+                        </div>
+                    </details>
+                    <details class="setting-group settings-accordion">
+                        <summary class="setting-group-title">记录管理</summary>
+                        <div class="setting-group-content">
+                            <button class="form-button secondary" id="export-json-btn">导出为 JSON</button>
+                            <button class="form-button secondary" id="import-json-btn">从 JSON 导入</button>
+                            <input type="file" id="import-json-input" accept=".json" style="display:none;">
+                            <button class="form-button secondary" id="export-txt-btn">导出为 TXT</button>
+                        </div>
+                    </details>
+                    <details class="setting-group settings-accordion cloud-sync-group">
+                        <summary class="setting-group-title">云同步</summary>
+                        <div class="setting-group-content">
+                            <p class="cloud-sync-explainer">目前只同步文字聊天和表情名称。不登录时完全保持本地使用；图片、头像、背景、表情包图片、账本、日程和 API Key 都不会上传。</p>
+                            <div class="form-group">
+                                <label for="cloud-supabase-url">Supabase Project URL</label>
+                                <input type="url" id="cloud-supabase-url" placeholder="https://abcdef.supabase.co" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="cloud-supabase-key">Publishable key / anon public key</label>
+                                <input type="password" id="cloud-supabase-key" placeholder="这里只能填公开 key，绝对不要填 service_role" autocomplete="off">
+                            </div>
+                            <button type="button" class="form-button secondary" id="cloud-save-project-btn">保存 Supabase 连接</button>
+                            <div class="cloud-account-divider"></div>
+                            <div id="cloud-current-user" class="cloud-current-user">当前未登录</div>
+                            <div class="form-group">
+                                <label for="cloud-email">邮箱</label>
+                                <input type="email" id="cloud-email" autocomplete="email" placeholder="you@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="cloud-password">密码</label>
+                                <input type="password" id="cloud-password" autocomplete="current-password" placeholder="至少 6 位">
+                            </div>
+                            <div class="cloud-account-actions">
+                                <button type="button" class="form-button secondary" id="cloud-register-btn">注册</button>
+                                <button type="button" class="form-button" id="cloud-login-btn">登录</button>
+                                <button type="button" class="form-button secondary" id="cloud-logout-btn" hidden>退出登录</button>
+                            </div>
+                            <div class="cloud-sync-summary">
+                                <span id="cloud-sync-status" data-status="local">本地模式</span>
+                                <button type="button" id="cloud-sync-now-btn">立即同步</button>
+                            </div>
+                            <div id="cloud-account-notice" class="cloud-account-notice" role="status" aria-live="polite"></div>
+                        </div>
+                    </details>
                     <p style="text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-secondary);">
                         Technical support from Cava, Claude & Gemini</p>
                 </div>
