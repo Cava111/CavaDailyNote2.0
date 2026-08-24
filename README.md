@@ -1,65 +1,69 @@
-# Cava 记事本：模块化结构
+# Cava 记事本 2.0
 
-这是从原始单文件 `index.html` 拆分出的无构建工具版本。页面仍可直接双击 `index.html` 打开；资源均使用相对路径，加载顺序在 `index.html` 中明确声明。
+把 AI 聊天、记账、日程、日记和长期记忆放进同一个手机网页里。
 
-## 目录
+在线使用：[打开 Cava 记事本](https://cava111.github.io/CavaDailyNote2.0/)
 
-```text
-index.html
-assets/
-  icons.svg             # 项目统一的 SVG 图标精灵
-  css/
-    base.css          # 变量、通用布局与导航
-    chat.css          # 聊天界面与消息卡片
-    ledger.css        # 账本与交易录入
-    schedule.css      # 日程、日历与任务视图
-    settings.css      # 设置页与主题
-    modals.css        # 通用弹窗、侧边栏与裁剪器
-    markdown.css      # Markdown 和代码块展示
-    memory.css        # 摘要记忆管理界面
-  js/modules/
-    01-diary.js           # 日记生成与删除
-    02-core.js            # Dexie 数据库、全局状态、初始化与配置
-    02-cloud-sync.js       # Supabase 登录与非敏感数据双向同步
-    03-event-listeners.js # 页面事件绑定
-    04-chat.js            # 聊天、API 调用、消息渲染
-    05-ledger.js          # 账本、图表与交易管理
-    06-schedule.js        # 日程、日历与任务管理
-    07-data-tools.js      # 筛选、头像处理、导入导出与侧边栏
-    08-settings.js        # 弹窗工具、代理、角色、币种与表情包设置
-    09-memory.js          # Memory 总结、召回、游标与管理
-  js/icon-library.js      # appIcon()：动态界面的 SVG 图标助手
-```
+## 可以做什么
 
-## 维护约定
+- 和多个自定义 AI 角色聊天，并为角色选择不同模型、提示词和参数。
+- 连接 OpenAI 兼容接口，自定义 Base URL、模型和备用代理。
+- 在聊天里直接记账、添加日程，也可以去独立页面查看和管理。
+- 按日期、角色和聊天记录生成日记。
+- 用 Memory 自动总结较早的聊天，在以后对话中继续调用。
+- 管理币种、记账模板、循环日程、表情包、主题和聊天背景。
+- 导出完整 JSON 备份，也可以恢复到另一台设备。
 
-- CSS 按页面功能维护，新增样式优先放入对应文件；若是跨页面样式，放入 `base.css` 或 `modals.css`。
-- JavaScript 目前保留经典脚本和固定加载顺序，以确保原先的共享状态与函数调用不变。模块文件由 `index.html` 以 `defer` 顺序加载；不要随意调整顺序。
-- 外部依赖 Dexie 和 Cropper.js 暂保持原有 CDN 引用，后续可在引入构建工具时改为 npm 依赖。
-- 功能图标统一来自 `assets/icons.svg`。动态界面请调用 `appIcon('图标名')`，不要重新加入 emoji 或图标字体。
-- 原始单文件应保留为 `index.single-file.backup.html`，它是最直接的回滚版本。
+## 三步开始使用
 
-## 摘要记忆
+1. 打开在线页面，进入底部的“设置”。
+2. 在“AI 设置”中添加代理，填写 Base URL 和你自己的 AI API Key，再创建 AI 角色。
+3. 想跨设备使用时，展开“云同步”，注册或登录同一个账号。
 
-- Dexie schema v11 新增 `memories` 表，既有 v10 数据会由 Dexie 原地升级并保留。
-- Memory 设置和两套总结游标保存在 `appConfig.memorySettings` 中。
-- AI 请求按“角色/System Prompt → 命中的 Memory → 最近原始消息”排列，Memory 使用独立 Token 上限。
-- Memory 是底部导航中的独立页面，位于“日程”和“设置”之间。
-- 摘要执行者可以选择 AI 角色，也可以直接选择已有代理中已启用的轻量模型。
-- JSON 备份/恢复包含 `memories` 与 `diaries` 表。
+不登录也可以正常使用。Cava 会先把内容保存在当前浏览器里，断网时仍能查看和编辑。
 
-## AI 日记上下文
+## 云同步会传什么
 
-- `appConfig` 中的 `diaryLookbackDays`、`diaryLookaheadDays` 与 `diaryContextMaxTokens` 分别控制目标日前后窗口和原始聊天 Token 上限，旧用户默认获得 `3 / 1 / 8000`。
-- 日记通过 `buildDiaryContext()` 按用户本地日期筛选消息，不再使用普通聊天的最近消息窗口。
-- 日记原始消息超限时优先保留目标日，再按日历距离保留邻近日；Memory 继续使用自身独立 Token 上限。
-- 日记请求会排除 `startTime` 或 `endTime` 明确晚于允许结束时间的 Memory。
+登录后会同步：
 
-## Pre-MCP：完整安全数据同步
+- 用户资料和普通设置
+- AI Base URL、模型列表、角色文字设置和生成参数
+- 非图片聊天消息
+- 账目、记账模板和币种
+- 日程和完成状态
+- 日记和 Memory
 
-- Dexie schema v13 给配置、AI 代理与角色、账目、模板、币种、日程、日记和 Memory 增加云端身份与修改时间；旧数值 `id` 保留，跨设备关系通过 `syncId` 重建。
-- 未登录时仍是纯本地应用；登录 Supabase 后自动双向同步用户资料、普通设置、AI Base URL、聊天、账本、日程、日记和 Memory。
-- 使用最后修改时间决定哪一版胜出；离线修改保留为待同步，联网后自动继续。删除采用 `deletedAt` 标记，防止另一台设备把旧内容恢复。
-- 上传前会递归剔除 Base64 数据、Blob 和密钥字段。图片、头像、背景、表情包图片、API Key、Supabase key、密码与 Token 不上传；`tokenLimit` / `maxTokens` 这类普通数值设置正常同步。
-- Supabase 先运行 `supabase/001_messages_sync.sql`，再运行 `supabase/002_full_data_sync.sql`。完整设置步骤见 `SUPABASE-SETUP.md`。
-- 当前版本已预填 CavaDailyNote 的 Project URL 与浏览器 Publishable key。严禁把 `service_role`、secret key 或数据库密码写进前端。
+这些内容不会上传：
+
+- AI API Key、密码、Token、Secret 等所有密钥
+- Base64 图片、头像、聊天背景和表情包图片
+
+所以换设备后，文字数据会回来，但头像、背景和 API Key 需要在新设备重新填写。
+
+## 默认云端和自己的云端
+
+在线版默认连接到 Cava 提供的 Supabase 项目。每个人注册的是独立用户，数据库已开启 RLS，普通用户只能读取和修改自己的数据，不能看到其他账号的数据。
+
+需要注意：同步内容不是端到端加密。Supabase 项目的管理员在技术上可以管理服务器中的同步数据；图片和密钥因为根本不上传，不在这个范围里。
+
+如果希望所有云端数据都完全放在自己的项目中，可以自建后端：
+
+1. 新建一个 Supabase Project。
+2. 在 SQL Editor 依次运行 [`001_messages_sync.sql`](supabase/001_messages_sync.sql) 和 [`002_full_data_sync.sql`](supabase/002_full_data_sync.sql)。
+3. 在 Cava 的“设置 → 云同步”中填写自己的 Project URL 和 Publishable key，然后保存。
+4. 在每台新设备上先填一次相同的 URL 和 Publishable key，再登录自己项目里的账号。
+
+这里只能填写浏览器使用的 `Publishable key`（旧项目也可能叫 `anon public key`）。绝对不要把 `service_role`、secret key 或数据库密码填进网页。
+
+## 数据安全提醒
+
+- 浏览器本地数据可能在清理网站数据、无痕模式结束或卸载浏览器后消失，重要内容请定期导出 JSON 备份。
+- JSON 备份是完整本地备份，可能包含图片、聊天和 AI API Key。请自己妥善保存，不要传到公开 GitHub、网盘分享链接或聊天群。
+- 同一条内容在两台离线设备同时修改时，重新联网后通常以最后修改的版本为准。
+- Base64 图片目前只保存在最初添加它的设备上，不会跨设备出现。
+
+## 更多设置说明
+
+第一次自建 Supabase 时，可以照着 [`SUPABASE-SETUP.md`](SUPABASE-SETUP.md) 一步一步操作。
+
+这是一个无构建工具的纯前端项目，也可以下载全部文件后直接打开 `index.html` 使用。
