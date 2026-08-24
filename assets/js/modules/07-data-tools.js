@@ -100,9 +100,19 @@
                         await db.open();
                         if (data.appConfig) await db.appConfig.bulkPut(data.appConfig);
                         if (data.transactions) await db.transactions.bulkPut(data.transactions);
-                        if (data.messages) await db.messages.bulkPut(data.messages);
+                        if (data.messages) {
+                            const importTime = Date.now();
+                            await db.messages.bulkPut(data.messages.map(message => ensureMessageSyncMetadata(message, importTime)));
+                        }
                         if (data.apiProxies) await db.apiProxies.bulkPut(data.apiProxies);
-                        if (data.aiCharacters) await db.aiCharacters.bulkPut(data.aiCharacters);
+                        if (data.aiCharacters) {
+                            await db.aiCharacters.bulkPut(data.aiCharacters.map(character => ({
+                                ...character,
+                                syncId: character.syncId || createLegacySyncId('character', [
+                                    character.id, character.name, character.prompt
+                                ])
+                            })));
+                        }
                         if (data.currencies) await db.currencies.bulkPut(data.currencies);
                         if (data.schedules) await db.schedules.bulkPut(data.schedules);
                         if (data.emojiPacks) await db.emojiPacks.bulkPut(data.emojiPacks);

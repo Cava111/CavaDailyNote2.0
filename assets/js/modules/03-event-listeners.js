@@ -280,8 +280,7 @@
                     const summaryData = { pending, completed, date: todayStr };
 
                     const newMsg = { timestamp: Date.now(), role: 'user', content: JSON.stringify(summaryData), type: 'today_tasks_summary' };
-                    const id = await db.messages.add(newMsg);
-                    state.messages.push({ ...newMsg, id });
+                    await createMessageRecord(newMsg);
                     navigateTo('accounting-screen');
                     renderChatMessages(true, true);
                 }
@@ -330,8 +329,7 @@
                     const summaryData = { year, month: month + 1, events: monthEvents };
 
                     const newMsg = { timestamp: Date.now(), role: 'user', content: JSON.stringify(summaryData), type: 'calendar_view_summary' };
-                    const id = await db.messages.add(newMsg);
-                    state.messages.push({ ...newMsg, id });
+                    await createMessageRecord(newMsg);
                     navigateTo('accounting-screen');
                     renderChatMessages(true, true);
                 }
@@ -453,8 +451,7 @@
                             await db.transactions.delete(id);
                             state.transactions = state.transactions.filter(t => t.id !== id);
                             if (msg) {
-                                await db.messages.delete(msg.id);
-                                state.messages = state.messages.filter(m => m.id !== msg.id);
+                                await deleteMessageRecord(msg.id);
                             }
                             modal.classList.remove('visible');
                             renderLedger();

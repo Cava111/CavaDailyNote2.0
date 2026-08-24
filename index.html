@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cava记事本2.0beta</title>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <link rel="stylesheet" href="assets/css/base.css">
@@ -90,7 +91,7 @@
                 <div class="header">
                     <div class="left-action"><span class="action-btn" id="chat-settings-btn">≡</span></div>
                     <div class="center-title"><span id="chat-header-title">我的记事本</span></div>
-                    <div class="right-action"></div>
+                    <div class="right-action"><button type="button" id="sync-status-indicator" class="sync-status-indicator" data-status="local">本地模式</button></div>
                 </div>
                 <div id="chat-messages"></div>
                 <div id="selection-action-bar">
@@ -349,6 +350,39 @@
                     <div class="right-action"></div>
                 </div>
                 <div class="page-content">
+                    <div class="setting-group cloud-sync-group">
+                        <div class="setting-group-title">云同步（目前只同步文字聊天）</div>
+                        <p class="cloud-sync-explainer">不登录时完全保持本地使用。登录后，文字和表情名称会同步；图片、头像、背景、表情包图片、账本、日程和 API Key 都不会上传。</p>
+                        <div class="form-group">
+                            <label for="cloud-supabase-url">Supabase Project URL</label>
+                            <input type="url" id="cloud-supabase-url" placeholder="https://abcdef.supabase.co" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="cloud-supabase-key">Publishable key / anon public key</label>
+                            <input type="password" id="cloud-supabase-key" placeholder="这里只能填公开 key，绝对不要填 service_role" autocomplete="off">
+                        </div>
+                        <button type="button" class="form-button secondary" id="cloud-save-project-btn">保存 Supabase 连接</button>
+                        <div class="cloud-account-divider"></div>
+                        <div id="cloud-current-user" class="cloud-current-user">当前未登录</div>
+                        <div class="form-group">
+                            <label for="cloud-email">邮箱</label>
+                            <input type="email" id="cloud-email" autocomplete="email" placeholder="you@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="cloud-password">密码</label>
+                            <input type="password" id="cloud-password" autocomplete="current-password" placeholder="至少 6 位">
+                        </div>
+                        <div class="cloud-account-actions">
+                            <button type="button" class="form-button secondary" id="cloud-register-btn">注册</button>
+                            <button type="button" class="form-button" id="cloud-login-btn">登录</button>
+                            <button type="button" class="form-button secondary" id="cloud-logout-btn" hidden>退出登录</button>
+                        </div>
+                        <div class="cloud-sync-summary">
+                            <span id="cloud-sync-status" data-status="local">本地模式</span>
+                            <button type="button" id="cloud-sync-now-btn">立即同步</button>
+                        </div>
+                        <div id="cloud-account-notice" class="cloud-account-notice" role="status" aria-live="polite"></div>
+                    </div>
                     <div class="setting-group">
                         <div class="setting-group-title">外观设置</div>
                         <div class="form-group">
@@ -871,6 +905,7 @@
     <script defer src="assets/js/icon-library.js"></script>
     <script defer src="assets/js/modules/01-diary.js"></script>
     <script defer src="assets/js/modules/02-core.js"></script>
+    <script defer src="assets/js/modules/02-cloud-sync.js"></script>
     <script defer src="assets/js/modules/03-event-listeners.js"></script>
     <script defer src="assets/js/modules/04-chat.js"></script>
     <script defer src="assets/js/modules/05-ledger.js"></script>

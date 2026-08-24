@@ -215,8 +215,7 @@
                     const id = await db.schedules.add(scheduleData);
                     scheduleData.id = id;
                     state.schedules.push(scheduleData);
-                    const msgId = await db.messages.add({ timestamp: scheduleData.timestamp, role: 'user', content: ``, type: 'schedule', relatedId: id });
-                    state.messages.push({ id: msgId, timestamp: scheduleData.timestamp, role: 'user', type: 'schedule', relatedId: id });
+                    await createMessageRecord({ timestamp: scheduleData.timestamp, role: 'user', content: ``, type: 'schedule', relatedId: id });
                 }
 
                 hideSchedulePanel();
@@ -722,8 +721,7 @@
                 await db.schedules.delete(id);
                 state.schedules = state.schedules.filter(s => s.id !== id);
                 if (msg) {
-                    await db.messages.delete(msg.id);
-                    state.messages = state.messages.filter(m => m.id !== msg.id);
+                    await deleteMessageRecord(msg.id);
                 }
 
                 document.getElementById('schedule-detail-modal').classList.remove('visible');
@@ -858,8 +856,7 @@
                     if (!confirm('要将当前图表分析同步到聊天中吗？')) return;
 
                     const newMsg = { timestamp: Date.now(), role: 'user', content: JSON.stringify(summaryData), type: 'pie_chart_summary' };
-                    const id = await db.messages.add(newMsg);
-                    state.messages.push({ ...newMsg, id });
+                    await createMessageRecord(newMsg);
                 } else {
                     // Sync list data
                     if (filtered.length === 0) { alert('当前筛选条件下没有数据可同步'); return; }
@@ -874,8 +871,7 @@
                     }));
 
                     const newMsg = { timestamp: Date.now(), role: 'user', content: JSON.stringify(summaryData), type: 'ledger_summary' };
-                    const id = await db.messages.add(newMsg);
-                    state.messages.push({ ...newMsg, id });
+                    await createMessageRecord(newMsg);
                 }
                 navigateTo('accounting-screen');
                 renderChatMessages(true, true);
@@ -893,8 +889,7 @@
                 }));
 
                 const newMsg = { timestamp: Date.now(), role: 'user', content: JSON.stringify(summaryData), type: 'schedule_summary' };
-                const id = await db.messages.add(newMsg);
-                state.messages.push({ ...newMsg, id });
+                await createMessageRecord(newMsg);
                 navigateTo('accounting-screen');
                 renderChatMessages(true, true);
             }

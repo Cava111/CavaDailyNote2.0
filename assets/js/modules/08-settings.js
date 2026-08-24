@@ -642,8 +642,7 @@
                                 content: `[emoji:${emoji.name}]`,  // 特殊格式存储
                                 type: 'emoji_pack'
                             };
-                            const id = await db.messages.add(newMsg);
-                            state.messages.push({ ...newMsg, id });
+                            await createMessageRecord(newMsg);
                             renderChatMessages();
                         }
                         modal.remove();

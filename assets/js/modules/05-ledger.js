@@ -379,7 +379,7 @@
                 const responseIds = responseMessages.map(item => item.id).filter(id => typeof id === 'number');
                 state.isRegeneratingAIResponse = true;
                 try {
-                    if (responseIds.length > 0) await db.messages.bulkDelete(responseIds);
+                    if (responseIds.length > 0) await deleteMessageRecords(responseIds);
                     const responseIdSet = new Set(responseMessages.map(item => item.id));
                     state.messages = state.messages.filter(item => !responseIdSet.has(item.id));
                     renderChatMessages(false);
@@ -487,8 +487,7 @@
                         await db.schedules.update(msg.relatedId, { description: newText });
                         if (document.getElementById('schedule-screen').classList.contains('active')) renderSchedules();
                     } else if (msg.type === 'text') {
-                        state.messages[msgIndex].content = newText;
-                        await db.messages.update(msgId, { content: newText });
+                        await updateMessageRecord(msgId, { content: newText });
                     }
 
                     state.currentlyEditingMsgId = null;
@@ -509,8 +508,7 @@
                     state.schedules = state.schedules.filter(s => s.id !== msg.relatedId);
                     renderSchedules();
                 }
-                await db.messages.delete(msgId);
-                state.messages = state.messages.filter(m => m.id !== msgId);
+                await deleteMessageRecord(msgId);
                 renderChatMessages(false);
             }
             async function copyMessage(msgId) {
@@ -559,11 +557,10 @@
 
                 if (transIdsToDelete.length > 0) await db.transactions.bulkDelete(transIdsToDelete);
                 if (scheduleIdsToDelete.length > 0) await db.schedules.bulkDelete(scheduleIdsToDelete);
-                await db.messages.bulkDelete(msgIdsToDelete);
+                await deleteMessageRecords(msgIdsToDelete);
 
                 state.transactions = state.transactions.filter(t => !transIdsToDelete.includes(t.id));
                 state.schedules = state.schedules.filter(s => !scheduleIdsToDelete.includes(s.id));
-                state.messages = state.messages.filter(m => !msgIdsToDelete.includes(m.id));
 
                 exitSelectionMode();
                 renderChatMessages(false);
@@ -604,8 +601,7 @@
                             await db.transactions.delete(id);
                             state.transactions = state.transactions.filter(t => t.id !== id);
                             if (msg) {
-                                await db.messages.delete(msg.id);
-                                state.messages = state.messages.filter(m => m.id !== msg.id);
+                                await deleteMessageRecord(msg.id);
                             }
                             hideTransactionPanel();
                             renderLedger();
@@ -700,7 +696,7 @@
                         remark: remark
                     };
                     const transId = await db.transactions.add(newTransaction);
-                    const msgId = await db.messages.add({
+                    await createMessageRecord({
                         timestamp: newTransaction.timestamp,
                         role: 'user',
                         content: ``,
@@ -708,7 +704,6 @@
                         relatedId: transId
                     });
                     state.transactions.push({ ...newTransaction, id: transId });
-                    state.messages.push({ id: msgId, timestamp: newTransaction.timestamp, role: 'user', type: 'transaction', relatedId: transId });
 
                     hideTransactionPanel();
                     resetTransactionState();

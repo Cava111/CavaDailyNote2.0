@@ -28,6 +28,32 @@
                 memories: '++id, startTime, endTime, sourceType, sourceStartId, sourceEndId, recallMode, sortOrder, createdAt'
             });
 
+            // v12 prepares plain chat messages for local-first cloud sync.
+            // Existing numeric IDs stay in place so old relations and UI code keep working.
+            db.version(12).stores({
+                appConfig: 'id',
+                transactions: '++id, timestamp, type, category, amount, currency, remark',
+                messages: '++id, &syncId, timestamp, updatedAt, deletedAt, syncStatus, role, content, type, senderId, relatedId',
+                apiProxies: '++id, name, url, apiKey, models',
+                aiCharacters: '++id, &syncId, name, prompt, avatar, proxyId, model, backupProxyId, backupModel',
+                currencies: 'code, name, rate',
+                transactionTemplates: '++id, name, type, category, amount, currency, remark',
+                schedules: '++id, timestamp, title, description, importance, deadline, eventType, completed, recurrence, endDate, completedDates',
+                emojiPacks: '++id, name, image, timestamp',
+                diaries: '++id, date, charId, content, timestamp',
+                memories: '++id, startTime, endTime, sourceType, sourceStartId, sourceEndId, recallMode, sortOrder, createdAt'
+            }).upgrade(async transaction => {
+                const migrationTime = Date.now();
+                await transaction.table('aiCharacters').toCollection().modify(character => {
+                    character.syncId = character.syncId || createLegacySyncId('character', [
+                        character.id, character.name, character.prompt
+                    ]);
+                });
+                await transaction.table('messages').toCollection().modify(message => {
+                    Object.assign(message, ensureMessageSyncMetadata(message, migrationTime));
+                });
+            });
+
             const DEFAULT_SYSTEM_PROMPTS = {
                 sendTime: true,
                 sendModel: true,
@@ -100,6 +126,139 @@
             };
             const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiNGQUUxRDUiLz48cGF0aCBkPSJNNzIgMzVBNiA2IDAgMSAwIDYwIDM1IDYgNiAwIDAgMCA3MiAzNW0tNDQgMEE2IDYgMCAxIDAgMTYgMzUgNiA2IDAgMCAwIDI4IDM1TTMzIDYwYTQwIDQwIDAgMCAwIDM0IDBjLTEuNS05LTcuNS0xNS0xNy0xNVMzNC41IDUxIDMzIDYwWiIgZmlsbD0iIzhDN0I3MyIvPjwvc3ZnPg==';
 
+            function createCavaSyncId() {
+                if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+                const bytes = new Uint8Array(16);
+                if (globalThis.crypto?.getRandomValues) {
+                    globalThis.crypto.getRandomValues(bytes);
+                } else {
+                    for (let index = 0; index < bytes.length; index++) bytes[index] = Math.floor(Math.random() * 256);
+                }
+                bytes[6] = (bytes[6] & 0x0f) | 0x40;
+                bytes[8] = (bytes[8] & 0x3f) | 0x80;
+                const hex = [...bytes].map(value => value.toString(16).padStart(2, '0'));
+                return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
+            }
+
+            function createLegacySyncId(namespace, values) {
+                const input = `${namespace}:${JSON.stringify(values)}`;
+                const seeds = [0x811c9dc5, 0x9e3779b9, 0x85ebca6b, 0xc2b2ae35];
+                const words = seeds.map((seed, seedIndex) => {
+                    let hash = seed >>> 0;
+                    for (let index = 0; index < input.length; index++) {
+                        hash ^= input.charCodeAt(index) + seedIndex;
+                        hash = Math.imul(hash, 0x01000193) >>> 0;
+                    }
+                    return hash;
+                });
+                const bytes = new Uint8Array(16);
+                words.forEach((word, wordIndex) => {
+                    for (let offset = 0; offset < 4; offset++) {
+                        bytes[wordIndex * 4 + offset] = (word >>> (offset * 8)) & 0xff;
+                    }
+                });
+                bytes[6] = (bytes[6] & 0x0f) | 0x40;
+                bytes[8] = (bytes[8] & 0x3f) | 0x80;
+                const hex = [...bytes].map(value => value.toString(16).padStart(2, '0'));
+                return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
+            }
+
+            function isMessageCloudSyncEligible(messageOrType) {
+                const type = typeof messageOrType === 'string' ? messageOrType : messageOrType?.type;
+                // Images and records that depend on unsynced ledger/schedule rows stay local for this MVP.
+                return type === 'text' || type === 'emoji_pack';
+            }
+
+            function ensureMessageSyncMetadata(message, fallbackTime = Date.now()) {
+                const createdAt = Number(message.createdAt) || Number(message.timestamp) || fallbackTime;
+                return {
+                    ...message,
+                    syncId: message.syncId || createLegacySyncId('message', [
+                        message.id, message.timestamp, message.role, message.type, message.content,
+                        message.senderId, message.relatedId, message.responseGroupId
+                    ]),
+                    createdAt,
+                    updatedAt: Number(message.updatedAt) || createdAt,
+                    deletedAt: message.deletedAt || null,
+                    syncStatus: isMessageCloudSyncEligible(message)
+                        ? (message.syncStatus || 'pending')
+                        : 'local_only'
+                };
+            }
+
+            function getMessageSenderSnapshot(message) {
+                if (message.senderName) return message.senderName;
+                if (!message.senderId) return null;
+                return state.characters.find(character => character.id === message.senderId)?.name || null;
+            }
+
+            function requestMessageSyncSoon() {
+                if (typeof scheduleMessageSync === 'function') scheduleMessageSync();
+                if (typeof refreshCloudSyncUI === 'function') refreshCloudSyncUI();
+            }
+
+            async function createMessageRecord(messageData) {
+                const now = Date.now();
+                const record = {
+                    ...messageData,
+                    syncId: messageData.syncId || createCavaSyncId(),
+                    createdAt: Number(messageData.createdAt) || Number(messageData.timestamp) || now,
+                    updatedAt: Number(messageData.updatedAt) || now,
+                    deletedAt: messageData.deletedAt || null,
+                    syncStatus: isMessageCloudSyncEligible(messageData) ? 'pending' : 'local_only'
+                };
+                record.senderName = getMessageSenderSnapshot(record);
+                const id = await db.messages.add(record);
+                const stored = { ...record, id };
+                if (!stored.deletedAt) state.messages.push(stored);
+                requestMessageSyncSoon();
+                return stored;
+            }
+
+            async function updateMessageRecord(messageId, changes) {
+                const current = await db.messages.get(messageId);
+                if (!current) return null;
+                const updated = { ...current, ...changes, updatedAt: Date.now() };
+                updated.senderName = getMessageSenderSnapshot(updated);
+                updated.syncStatus = isMessageCloudSyncEligible(updated) ? 'pending' : 'local_only';
+                await db.messages.put(updated);
+                const stateIndex = state.messages.findIndex(message => message.id === messageId);
+                if (stateIndex >= 0) state.messages[stateIndex] = updated;
+                requestMessageSyncSoon();
+                return updated;
+            }
+
+            async function deleteMessageRecord(messageId) {
+                const current = await db.messages.get(messageId);
+                if (!current) return;
+                if (isMessageCloudSyncEligible(current)) {
+                    const now = Date.now();
+                    await db.messages.put({ ...current, deletedAt: now, updatedAt: now, syncStatus: 'pending' });
+                } else {
+                    await db.messages.delete(messageId);
+                }
+                state.messages = state.messages.filter(message => message.id !== messageId);
+                requestMessageSyncSoon();
+            }
+
+            async function deleteMessageRecords(messageIds) {
+                const records = (await db.messages.bulkGet(messageIds)).filter(Boolean);
+                const now = Date.now();
+                const tombstones = records
+                    .filter(isMessageCloudSyncEligible)
+                    .map(message => ({ ...message, deletedAt: now, updatedAt: now, syncStatus: 'pending' }));
+                const localOnlyIds = records
+                    .filter(message => !isMessageCloudSyncEligible(message))
+                    .map(message => message.id);
+                await db.transaction('rw', db.messages, async () => {
+                    if (tombstones.length) await db.messages.bulkPut(tombstones);
+                    if (localOnlyIds.length) await db.messages.bulkDelete(localOnlyIds);
+                });
+                const deletedSet = new Set(messageIds);
+                state.messages = state.messages.filter(message => !deletedSet.has(message.id));
+                requestMessageSyncSoon();
+            }
+
             async function init() {
                 await loadDataFromDB();
                 setupEventListeners();
@@ -112,6 +271,7 @@
                 updateSendButtonState();
                 populateLedgerCurrencyFilter();
                 initializeMemoryFeature();
+                if (typeof initializeCloudSync === 'function') await initializeCloudSync();
             }
 
 
@@ -120,7 +280,7 @@
                     db.appConfig.get('main'),
                     db.apiProxies.toArray(),
                     db.aiCharacters.toArray(),
-                    db.messages.orderBy('timestamp').toArray(),
+                    db.messages.orderBy('timestamp').filter(message => !message.deletedAt).toArray(),
                     db.transactions.orderBy('timestamp').toArray(),
                     db.currencies.toArray(),
                     db.schedules.toArray(),
@@ -135,6 +295,11 @@
                     id: 'main',
                     chatName: '我的记事本',
                     chatAvatar: DEFAULT_AVATAR,
+                    // 浏览器端公开连接信息。数据权限仍由 Supabase RLS 控制；不要在这里放 service_role/secret key。
+                    supabase: {
+                        url: 'https://omphkgpwcyqwdvuuipij.supabase.co',
+                        publishableKey: 'sb_publishable_-1A9nlnpwUyhAxDVmfB6PA_OlEUgIuW'
+                    },
                     maxTokens: 4096,
                     background: '',
                     theme: 'default',

@@ -24,8 +24,7 @@
 
                 if (text) {
                     const newMsg = { timestamp: Date.now(), role: 'user', content: text, type: 'text' };
-                    const id = await db.messages.add(newMsg);
-                    state.messages.push({ ...newMsg, id });
+                    await createMessageRecord(newMsg);
                     ELS.chatInput.value = '';
                     renderChatMessages();
                     updateSendButtonState();
@@ -40,8 +39,7 @@
                 const compressedBase64 = await compressImage(file, 800, 0.8);
 
                 const newMsg = { timestamp: Date.now(), role: 'user', content: compressedBase64, type: 'image' };
-                const id = await db.messages.add(newMsg);
-                state.messages.push({ ...newMsg, id });
+                await createMessageRecord(newMsg);
                 renderChatMessages();
                 event.target.value = '';
             }
@@ -254,8 +252,8 @@
                     senderId,
                     responseGroupId
                 };
-                const newId = await db.messages.add(newMsgData);
-                state.messages.push({ ...newMsgData, id: newId });
+                const storedMessage = await createMessageRecord(newMsgData);
+                const newId = storedMessage.id;
                 const bubbleWrapper = document.getElementById(bubbleId);
                 if (bubbleWrapper) {
                     const newBubble = createMessageElement({ ...newMsgData, id: newId });
@@ -272,8 +270,7 @@
                     senderId,
                     responseGroupId
                 };
-                const id = await db.messages.add(newMsg);
-                state.messages.push({ ...newMsg, id });
+                await createMessageRecord(newMsg);
                 renderChatMessages();
             }
 
@@ -492,8 +489,7 @@
 
             async function addAIMessage(content, senderId = null, responseGroupId = null) {
                 const newMsg = { timestamp: Date.now(), role: 'assistant', content, type: 'text', senderId, responseGroupId };
-                const id = await db.messages.add(newMsg);
-                state.messages.push({ ...newMsg, id });
+                await createMessageRecord(newMsg);
                 renderChatMessages();
             }
 
@@ -506,8 +502,8 @@
 
             async function updateThinkingBubble(bubbleId, content, senderId, isError = false, responseGroupId = null) {
                 const newMsgData = { timestamp: Date.now(), role: 'assistant', content, type: 'text', senderId, responseGroupId };
-                const newId = await db.messages.add(newMsgData);
-                state.messages.push({ ...newMsgData, id: newId });
+                const storedMessage = await createMessageRecord(newMsgData);
+                const newId = storedMessage.id;
                 const bubbleWrapper = document.getElementById(bubbleId);
                 if (bubbleWrapper) { const newBubble = createMessageElement({ ...newMsgData, id: newId }, isError); bubbleWrapper.parentElement.replaceChild(newBubble, bubbleWrapper); }
                 state.messages = state.messages.filter(m => m.id !== bubbleId);
@@ -612,6 +608,7 @@
                 });
 
                 let character = msg.senderId ? state.characters.find(c => c.id === msg.senderId) : null;
+                const senderDisplayName = character?.name || msg.senderName || null;
 
                 const avatar = document.createElement('img');
                 avatar.className = 'avatar';
@@ -620,10 +617,10 @@
                 const messageBlock = document.createElement('div');
                 messageBlock.className = 'message-block';
 
-                if (msg.role === 'assistant' && character) {
+                if (msg.role === 'assistant' && senderDisplayName) {
                     const senderName = document.createElement('div');
                     senderName.className = 'sender-name';
-                    senderName.textContent = character.name;
+                    senderName.textContent = senderDisplayName;
                     messageBlock.appendChild(senderName);
                 }
 

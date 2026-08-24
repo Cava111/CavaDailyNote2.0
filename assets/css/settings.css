@@ -739,3 +739,112 @@
         }
 
         /* Modals */
+/* Supabase account + message sync MVP */
+.sync-status-indicator {
+    max-width: 112px;
+    padding: 5px 9px;
+    border: 1px solid var(--border-color, var(--accent-primary));
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.sync-status-indicator[data-status="synced"],
+#cloud-sync-status[data-status="synced"] {
+    color: #2f7d55;
+    border-color: #77b99a;
+}
+
+.sync-status-indicator[data-status="syncing"],
+#cloud-sync-status[data-status="syncing"] {
+    color: var(--accent-primary);
+}
+
+.sync-status-indicator[data-status="pending"],
+#cloud-sync-status[data-status="pending"] {
+    color: #9a6800;
+    border-color: #d5aa50;
+}
+
+.sync-status-indicator[data-status="error"],
+#cloud-sync-status[data-status="error"] {
+    color: var(--expense-color);
+    border-color: var(--expense-color);
+}
+
+.cloud-sync-group input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cloud-sync-explainer {
+    margin: 0 0 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.cloud-account-divider {
+    height: 1px;
+    margin: 18px 0;
+    background: var(--border-color, rgba(0, 0, 0, .1));
+}
+
+.cloud-current-user {
+    margin-bottom: 14px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.cloud-account-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.cloud-account-actions > :only-child {
+    grid-column: 1 / -1;
+}
+
+.cloud-sync-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--bg-soft);
+    font-size: 13px;
+}
+
+#cloud-sync-now-btn {
+    border: 0;
+    background: transparent;
+    color: var(--accent-primary);
+    font: inherit;
+    cursor: pointer;
+}
+
+.cloud-account-notice {
+    min-height: 18px;
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.cloud-account-notice.success {
+    color: #2f7d55;
+}
+
+.cloud-account-notice.error {
+    color: var(--expense-color);
+}
